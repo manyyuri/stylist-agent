@@ -1,0 +1,12 @@
+{
+  "id": "blackpink",
+  "name": "BLACKPINK 浓颜欧美",
+  "icons": ["Jennie", "Lisa"],
+  "vibe": "气场全开、酷感利落、舞台浓度高的日常版",
+  "palette": ["#101014", "#E8E8E8", "#C0C0C0", "#8E9AAF", "#6C584C"],
+  "silhouettes": ["收身短上衣", "皮裤", "oversize 西装", "choker", "厚底靴", "cropped 夹克"],
+  "styleTags": ["浓颜", "欧美", "酷感", "气场", "极简高级"],
+  "makeupTraits": "挑眉、深眼窝、锐利眼线、欧美唇线、哑光底妆",
+  "avoid": ["碎花", "马卡龙色", "软萌元素"],
+  "occasions": ["日常", "拍照", "约会", "正式"]
+}

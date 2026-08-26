@@ -1,0 +1,30 @@
+{
+  "name": "stylist-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "女团风形象管家 Agent：每日 OOTD / 妆造 / 独拍计划 / 出片复盘闭环",
+  "scripts": {
+    "server": "tsx server/index.ts",
+    "dev:server": "tsx watch server/index.ts",
+    "dev:web": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit && npm --prefix web run typecheck",
+    "test": "tsx --test server/rules.test.ts server/sun.test.ts",
+    "start": "npm run build && tsx server/index.ts"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "openai": "^5.10.0",
+    "sharp": "^0.34.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/multer": "^1.4.13",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

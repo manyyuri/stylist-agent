@@ -1,0 +1,12 @@
+{
+  "id": "twice",
+  "name": "TWICE/JISOO 元气甜",
+  "icons": ["JISOO", "SANA"],
+  "vibe": "高饱和糖果感、元气减龄、日常也不夸张的甜",
+  "palette": ["#FF8FAB", "#FFD166", "#FFF5E4", "#6BCB77", "#4D96FF"],
+  "silhouettes": ["A 字裙", "针织开衫", "白袜小白鞋", "发夹", "泡泡袖", "背带裤"],
+  "styleTags": ["甜系", "元气", "减龄", "高饱和", "少女"],
+  "makeupTraits": "甜系腮团腮红、圆眼线、玻璃唇",
+  "avoid": ["暗色哥特", "过于性感的剪裁"],
+  "occasions": ["日常", "约会", "拍照"]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "mk_clear_cool",
+  "name": "清冷学院妆",
+  "anchors": ["newjeans"],
+  "faceFit": { "faceShape": [], "eyeShape": [] },
+  "skinToneFit": [],
+  "occasions": ["日常", "通勤", "拍照"],
+  "timeBudget": 15,
+  "difficulty": 2,
+  "steps": [
+    { "no": 1, "title": "清透底妆", "detail": "粉底液只涂面中，向外用海绵按压过渡，整体呈现「没怎么化妆」的匀净感", "products": ["轻薄粉底液", "海绵蛋"] },
+    { "no": 2, "title": "平直眉", "detail": "眉笔顺毛流填补，眉峰压平、眉尾拉直，最后用眉刷往下梳出毛流感", "products": ["眉笔", "眉刷"] },
+    { "no": 3, "title": "弱化眼妆", "detail": "浅米色眼影大面积打底，双眼皮褶皱内叠一层浅棕，眼线只填内眼线拉长 1mm", "products": ["米色眼影", "浅棕眼影", "眼线胶笔"] },
+    { "no": 4, "title": "卧蚕提亮", "detail": "米白色提亮笔轻画卧蚕下缘，用指腹晕开，制造无辜下至感", "products": ["卧蚕提亮笔"] },
+    { "no": 5, "title": "雾面豆沙唇", "detail": "雾面唇釉从唇内侧向外拍开，边缘用指腹模糊，呈现被咬过的豆沙色", "products": ["雾面豆沙唇釉"] },
+    { "no": 6, "title": "冷调腮红", "detail": "灰粉调腮红轻扫颧骨外侧，位置偏低偏侧，收脸不显甜", "products": ["灰粉调腮红"] }
+  ]
+}

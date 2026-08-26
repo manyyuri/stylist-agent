@@ -1,0 +1,368 @@
+/* ============================================================
+   小镜设计系统 —— 「今日通告单」
+   签名元素：小卡（photocard）白边相纸体系 + 时刻光带渐变
+   时刻光带 = 黄金时刻→落日→蓝调时刻（本 app 的核心物理量）
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* 色板 */
+  --paper: #faf6f3;        /* 暖粉瓷白底 */
+  --card: #ffffff;
+  --ink: #2a2431;          /* 墨紫黑 */
+  --ink-2: #6f6678;        /* 次级文字 */
+  --ink-3: #b4a9b8;        /* 钢印灰 */
+  --line: #ede5e0;         /* 发丝线 */
+  --rose: #d6486f;         /* 应援玫瑰 */
+  --rose-soft: #f9e8ee;
+  --amber: #e8a23d;        /* 黄金时刻 */
+  --amber-deep: #8a5a14;
+  --amber-soft: #fbf3e2;
+  --violet: #7c6ff0;       /* 蓝调时刻 */
+  --violet-deep: #4a41b8;
+  --violet-soft: #ecebfb;
+
+  /* 字体 */
+  --disp: 'DIN Alternate', 'Bahnschrift', 'Arial Narrow', 'PingFang SC', sans-serif;
+  --grad-hour: linear-gradient(90deg, #e8a23d, #d6486f 46%, #7c6ff0);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* ===== 时刻光带（全局只出现 3 次：顶缘 / 通告单 hero / 进行中时刻） ===== */
+.lightbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--grad-hour);
+  z-index: 100;
+}
+
+/* ===== 排版原子 ===== */
+
+/* 浓缩大写 eyebrow：日期、编号、时间戳（通告单的机器语言） */
+.eyebrow {
+  font-family: var(--disp);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+
+.eyebrow-rose {
+  color: var(--rose);
+}
+
+/* 分数钢印：SCORE 44 */
+.stamp {
+  font-family: var(--disp);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--rose);
+  background: var(--rose-soft);
+  border-radius: 8px;
+  padding: 3px 10px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.stamp b {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* ===== 签名：小卡（photocard）体系 ===== */
+.pcard {
+  background: var(--card);
+  padding: 5px 5px 0;
+  border-radius: 12px;
+  box-shadow:
+    0 1px 2px rgba(42, 36, 49, 0.07),
+    0 6px 18px rgba(42, 36, 49, 0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.pcard:active {
+  transform: scale(0.985);
+}
+.pcard-img {
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  background: #f1ebe6;
+  width: 100%;
+}
+.pcard-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pcard-cap {
+  padding: 6px 5px 9px;
+  min-width: 0;
+}
+.pcap-no {
+  font-family: var(--disp);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--ink-3);
+}
+.pcap-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.pcap-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  border: 1px solid rgba(42, 36, 49, 0.15);
+  flex-shrink: 0;
+}
+.pcap-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 5px;
+}
+.pchip {
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: var(--paper);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.pchip-gold {
+  background: var(--amber-soft);
+  color: var(--amber-deep);
+}
+.pchip-rose {
+  background: var(--rose-soft);
+  color: var(--rose);
+}
+
+/* ===== 今日通告单 hero ===== */
+.hero {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 18px 18px 16px;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(42, 36, 49, 0.05), 0 8px 24px rgba(42, 36, 49, 0.05);
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--grad-hour);
+}
+.hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.onair {
+  font-family: var(--disp);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--rose);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.onair i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rose);
+}
+.hero-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin: 6px 0 4px;
+  color: var(--ink);
+}
+.hero-meta {
+  font-size: 13px;
+  color: var(--ink-2);
+  margin: 0 0 12px;
+}
+
+/* 时刻 chips */
+.hourchips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hourchip {
+  border-radius: 10px;
+  padding: 8px 12px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.hourchip .t1 {
+  font-family: var(--disp);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  font-weight: 600;
+}
+.hourchip .t2 {
+  font-family: var(--disp);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.hourchip-gold {
+  background: var(--amber-soft);
+  color: var(--amber-deep);
+}
+.hourchip-violet {
+  background: var(--violet-soft);
+  color: var(--violet-deep);
+}
+.hourchip-rain {
+  background: #e8f1fb;
+  color: #2c5f8a;
+}
+
+/* ===== 叙事文本（女团感解读） ===== */
+.narrative {
+  font-size: 14px;
+  line-height: 1.85;
+  color: #4a4354;
+  margin: 4px 0 12px;
+}
+
+/* ===== 建议提示（拍照 hint 琥珀纸条） ===== */
+.note {
+  font-size: 13px;
+  color: var(--amber-deep);
+  background: var(--amber-soft);
+  padding: 9px 12px;
+  border-radius: 10px;
+  line-height: 1.7;
+}
+
+/* ===== 通用 chip（聊天建议等） ===== */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  color: var(--rose);
+  border: 1px solid #efc3cf;
+  background: var(--card);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.chip:active {
+  background: var(--rose-soft);
+}
+
+/* ===== iPhone 安全区 ===== */
+.safe-bottom {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+/* ===== 单品小卡横滑条 ===== */
+.hscroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+.hscroll::-webkit-scrollbar {
+  display: none;
+}
+.hscroll > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+.hscroll .pcard {
+  width: 104px;
+}
+
+/* ===== 触控目标 ≥ 44px ===== */
+.touchable {
+  min-height: 44px;
+}
+
+img {
+  -webkit-touch-callout: none;
+}
+
+/* ===== 聊天页布局：滚动区 + 吸底输入框 ===== */
+.chat-root {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 110px);
+}
+.chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.chat-sender {
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  background: var(--paper);
+  position: sticky;
+  bottom: 0;
+}
+
+/* ===== 入场动效（尊重系统减弱动态） ===== */
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+  .rise.d1 {
+    animation-delay: 0.07s;
+  }
+  .rise.d2 {
+    animation-delay: 0.14s;
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

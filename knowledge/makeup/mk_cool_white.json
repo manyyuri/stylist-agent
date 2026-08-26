@@ -1,0 +1,17 @@
+{
+  "id": "mk_cool_white",
+  "name": "冷白皮显白妆",
+  "anchors": ["newjeans", "aespa", "blackpink"],
+  "faceFit": { "faceShape": [], "eyeShape": [] },
+  "skinToneFit": ["冷白", "冷调自然"],
+  "occasions": ["日常", "通勤", "拍照", "约会"],
+  "timeBudget": 15,
+  "difficulty": 1,
+  "steps": [
+    { "no": 1, "title": "冷调底妆", "detail": "选粉调粉底，薄涂全脸，冷皮切忌黄调底妆会显脏", "products": ["粉调粉底液"] },
+    { "no": 2, "title": "冷粉腮红", "detail": "冷粉色腮红扫颧骨，位置偏高斜扫，显白又提气色", "products": ["冷粉腮红"] },
+    { "no": 3, "title": "灰调眉", "detail": "灰棕色眉粉顺毛流轻扫，冷皮配灰调眉最和谐", "products": ["灰棕眉粉"] },
+    { "no": 4, "title": "浆果色唇", "detail": "冷皮显白杀手锏：浆果色/玫红色唇釉，薄涂日常厚涂上镜", "products": ["浆果色唇釉"] },
+    { "no": 5, "title": "点睛高光", "detail": "偏光白高光点在鼻尖、颧骨、唇峰，冷调光泽加倍显白", "products": ["偏光高光"] }
+  ]
+}

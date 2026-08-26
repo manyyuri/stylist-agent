@@ -1,0 +1,13 @@
+{
+  "port": 4290,
+  "dataDir": "~/stylist-data",
+  "models": {
+    "text": "qwen-max",
+    "vision": "qwen-vl-max"
+  },
+  "city": {
+    "name": "上海",
+    "lat": 31.2304,
+    "lon": 121.4737
+  }
+}
