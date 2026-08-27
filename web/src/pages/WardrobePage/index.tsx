@@ -1,13 +1,14 @@
-/** 衣橱页：拍照入库向导（识别草稿 → 用户确认）+ 网格 + 筛选 + 编辑 */
+/** 服装间：定妆入库向导（识别草稿 → 用户确认）+ 卡册网格 + 今日候选 + 编辑 */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Button, Row, Col, Image, Segmented, Select, Modal, Form, Input,
+  Button, Row, Col, Image, Select, Form, Input,
   Slider, Checkbox, Switch, ColorPicker, Space, App, Empty, Spin, Alert,
 } from 'antd';
 import { CameraOutlined, InboxOutlined } from '@ant-design/icons';
-import type { Category, WardrobeItem } from '../../types';
+import type { Category, Ootd, WardrobeItem } from '../../types';
 import { request, upload } from '../../api';
 import { img, CATEGORY_LABEL, useUiStore } from '../../stores';
+import Sheet from '../../components/Sheet';
 
 const CATEGORIES: Category[] = ['outerwear', 'top', 'bottom', 'dress', 'shoes', 'bag', 'accessory', 'headwear'];
 const PATTERNS = ['纯色', '条纹', '碎花', '格纹', '印花', '拼色'];
@@ -102,7 +103,7 @@ function ItemForm({ initialValues, onDone, onCancel }: {
       <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
         <Button onClick={onCancel}>取消</Button>
         <Button type="primary" htmlType="submit" className="touchable">
-          {initialValues.id ? '保存修改' : '确认入库'}
+          {initialValues.id ? '保存修改' : '确认定妆'}
         </Button>
       </Space>
     </Form>
@@ -118,6 +119,7 @@ export default function WardrobePage() {
   const wardrobeVersion = useUiStore((s) => s.wardrobeVersion);
   const bumpWardrobe = useUiStore((s) => s.bumpWardrobe);
   const bump = useUiStore((s) => s.bump);
+  const [todayIds, setTodayIds] = useState<string[]>([]);
 
   // 入库向导状态
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -142,6 +144,12 @@ export default function WardrobePage() {
   }, [category, season, message]);
 
   useEffect(() => { load(); }, [load, wardrobeVersion]);
+
+  /* 今日候选：今日 OOTD 选中的单品，置顶 ON AIR */
+  useEffect(() => {
+    request<Ootd>('/api/ootd/today').then((o) => setTodayIds(o.items)).catch(() => {});
+  }, [wardrobeVersion]);
+  const todayItems = items.filter((i) => todayIds.includes(i.id));
 
   const pickPhoto = async (f: File | undefined) => {
     if (!f) return;
@@ -202,47 +210,85 @@ export default function WardrobePage() {
         onChange={(e) => { pickPhoto(e.target.files?.[0]); e.target.value = ''; }}
       />
       <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }}>
-        <Button type="primary" icon={<CameraOutlined />} onClick={() => fileRef.current?.click()} className="touchable">
-          拍照入库
+        <span className="eyebrow">服装间 · {items.length} 件</span>
+        <Button
+          type="primary"
+          shape="round"
+          icon={<CameraOutlined />}
+          onClick={() => fileRef.current?.click()}
+          className="touchable"
+        >
+          定妆入库
         </Button>
-        <Select
-          placeholder="季节"
-          allowClear
-          style={{ width: 100 }}
-          onChange={(v) => setSeason(v)}
-          options={['春', '夏', '秋', '冬'].map((s) => ({ value: s }))}
-        />
       </Space>
 
-      <Segmented
-        block
-        value={category}
-        onChange={(v) => setCategory(v as string)}
-        options={[{ value: 'all', label: '全部' }, ...CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABEL[c] }))]}
-        style={{ marginBottom: 16, overflowX: 'auto', whiteSpace: 'nowrap' }}
-      />
+      {/* 小红书式胶囊频道栏：类别 + 季节 */}
+      <div className="pillrow" style={{ marginBottom: 8 }}>
+        {[{ value: 'all', label: '全部' }, ...CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABEL[c] }))].map((o) => (
+          <span
+            key={o.value}
+            className={`pill ${category === o.value ? 'on' : ''}`}
+            onClick={() => { setCategory(o.value); navigator.vibrate?.(6); }}
+          >
+            {o.label}
+          </span>
+        ))}
+      </div>
+      <div className="pillrow" style={{ marginBottom: 14 }}>
+        {['春', '夏', '秋', '冬'].map((s) => (
+          <span
+            key={s}
+            className={`pill ${season === s ? 'on' : ''}`}
+            onClick={() => { setSeason(season === s ? undefined : s); navigator.vibrate?.(6); }}
+          >
+            {s}
+          </span>
+        ))}
+      </div>
+
+      {/* 今日候选横滑条 */}
+      {todayItems.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <div className="eyebrow eyebrow-rose" style={{ marginBottom: 8 }}>今日候选 · ON AIR</div>
+          <div className="hscroll">
+            {todayItems.map((it) => (
+              <div key={it.id} className="pcard onair" onClick={() => setEditing(it)} style={{ cursor: 'pointer' }}>
+                <div className="pcard-img">
+                  <img src={img(it.photo)} alt={it.subType} loading="lazy" />
+                </div>
+                <div className="pcard-cap">
+                  <div className="pcap-name">
+                    <i className="pcap-dot" style={{ background: it.colorHex }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.subType}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <Spin spinning={loading}>
         {items.length === 0 && !loading ? (
           <Empty
             description={
               <span style={{ color: '#6F6678', lineHeight: 1.8 }}>
-                衣橱还是空的
+                服装间还是空的
                 <br />
-                拍下今天要穿的几件，小镜来建档案、做搭配
+                拍下今天要穿的几件定妆照，小镜来建档、做搭配
               </span>
             }
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         ) : (
-          <Row gutter={[10, 10]}>
+          <div className="binder">
             {items.map((it) => (
-              <Col xs={12} md={8} key={it.id}>
-                <div
-                  className="pcard rise"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setEditing(it)}
-                >
+              <div
+                key={it.id}
+                className="pcard rise"
+                style={{ cursor: 'pointer' }}
+                onClick={() => setEditing(it)}
+              >
                   <div className="pcard-img">
                     <img src={img(it.photo)} alt={it.subType} loading="lazy" />
                   </div>
@@ -262,20 +308,16 @@ export default function WardrobePage() {
                     </div>
                   </div>
                 </div>
-              </Col>
             ))}
-          </Row>
+          </div>
         )}
       </Spin>
 
-      {/* 入库向导 */}
-      <Modal
-        title={recognizing ? '识别中…' : queue.length > 0 ? `已入队 ${queue.length} 件，继续拍下一件` : '确认单品信息'}
+      {/* 定妆入库向导（移动端半屏抽屉） */}
+      <Sheet
+        title={recognizing ? '识别中…' : draft ? '确认定妆单品' : `定妆入库 · 已入队 ${queue.length} 件`}
         open={wizardOpen}
-        footer={null}
-        onCancel={() => { setWizardOpen(false); setDraft(null); }}
-        width={520}
-        destroyOnHidden
+        onClose={() => { setWizardOpen(false); setDraft(null); }}
       >
         {recognizing ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
@@ -308,19 +350,16 @@ export default function WardrobePage() {
             </Space>
           </div>
         )}
-      </Modal>
+      </Sheet>
 
-      {/* 编辑 */}
-      <Modal
+      {/* 编辑（移动端半屏抽屉） */}
+      <Sheet
         title={`编辑 ${editing?.subType ?? ''}`}
         open={!!editing}
-        footer={null}
-        onCancel={() => setEditing(null)}
-        width={520}
-        destroyOnHidden
+        onClose={() => setEditing(null)}
       >
         {editing && <ItemForm key={editing.id} initialValues={editing} onDone={saveEdit} onCancel={() => setEditing(null)} />}
-      </Modal>
+      </Sheet>
     </div>
   );
 }

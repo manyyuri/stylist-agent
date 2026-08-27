@@ -4,7 +4,7 @@
  * 这是本应用的签名元素（把日常穿搭配变成可收藏的小卡墙）。
  */
 import { useEffect, useState } from 'react';
-import { Card, Tag, Skeleton, Steps, Collapse } from 'antd';
+import { Card, Skeleton, Steps, Collapse } from 'antd';
 import { ClockCircleOutlined, CameraOutlined } from '@ant-design/icons';
 import type { Ootd, WardrobeItem } from '../types';
 import { request } from '../api';
@@ -62,22 +62,18 @@ export default function OutfitCard({ ootd, showActions }: { ootd: Ootd; showActi
       }
       extra={
         ootd.source === 'llm' ? (
-          <Tag color="magenta" style={{ margin: 0 }}>
-            小镜精选
-          </Tag>
+          <span className="pchip pchip-rose">小镜精选</span>
         ) : (
-          <Tag style={{ margin: 0, color: '#6F6678' }}>
-            规则推荐
-          </Tag>
+          <span className="pchip">规则推荐</span>
         )
       }
     >
       {/* 天气行 + 匹配分钢印 */}
       <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <Tag style={{ margin: 0, background: '#FAF6F3', border: 'none', color: '#6F6678' }}>
+        <span className="pchip">
           {ootd.weather.condition} {ootd.weather.tempRange[0]}~{ootd.weather.tempRange[1]}°
-        </Tag>
-        {ootd.weather.rainProb >= 30 && <Tag color="blue" style={{ margin: 0 }}>降水 {ootd.weather.rainProb}%</Tag>}
+        </span>
+        {ootd.weather.rainProb >= 30 && <span className="pchip pchip-gold">降水 {ootd.weather.rainProb}%</span>}
         <span className="stamp">
           SCORE <b>{ootd.outfitScore}</b>
         </span>

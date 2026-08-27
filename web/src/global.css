@@ -40,6 +40,9 @@ body {
   -webkit-font-smoothing: antialiased;
   background: var(--paper);
   color: var(--ink);
+  /* 禁掉双击缩放延迟，保证双击比心即时触发 */
+  touch-action: manipulation;
+  overscroll-behavior-y: none;
 }
 
 /* ===== 时刻光带（全局只出现 3 次：顶缘 / 通告单 hero / 进行中时刻） ===== */
@@ -50,7 +53,34 @@ body {
   right: 0;
   height: 3px;
   background: var(--grad-hour);
+  background-size: 220% 100%;
   z-index: 100;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lightbar {
+    animation: hourflow 26s linear infinite;
+  }
+  @keyframes hourflow {
+    to {
+      background-position: 220% 0;
+    }
+  }
+}
+
+/* ===== 时刻氛围：界面随真实日光呼吸（数据来自 /api/weather 的太阳窗口） ===== */
+body {
+  transition: background-color 1.4s ease;
+}
+:root[data-hour='golden'] {
+  --paper: #fbf1e2;      /* 黄金时刻：纸面泛金 */
+  --rose-soft: #f9e6e4;
+}
+:root[data-hour='blue'] {
+  --paper: #f1f0fa;      /* 蓝调时刻：纸面偏靛 */
+  --rose-soft: #f2e9f2;
+}
+:root[data-hour='night'] {
+  --paper: #ece8f1;      /* 深夜：整体压暗半档 */
 }
 
 /* ===== 排版原子 ===== */
@@ -185,6 +215,12 @@ body {
   bottom: 0;
   height: 3px;
   background: var(--grad-hour);
+  background-size: 220% 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero::after {
+    animation: hourflow 26s linear infinite;
+  }
 }
 .hero-top {
   display: flex;
@@ -214,7 +250,9 @@ body {
   color: var(--ink);
 }
 .hero-meta {
+  font-family: var(--disp);
   font-size: 13px;
+  letter-spacing: 0.06em;
   color: var(--ink-2);
   margin: 0 0 12px;
 }
@@ -326,7 +364,154 @@ img {
   -webkit-touch-callout: none;
 }
 
-/* ===== 聊天页布局：滚动区 + 吸底输入框 ===== */
+/* ===== 下拉刷新指示器 ===== */
+.ptr {
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
+  overflow: hidden;
+  transition: height 0.18s ease;
+  line-height: 32px;
+}
+
+/* ===== 出演确定·钢印盖章 ===== */
+.seal {
+  position: fixed;
+  z-index: 300;
+  pointer-events: none;
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.14em;
+  color: var(--rose);
+  border: 3px solid var(--rose);
+  border-radius: 10px;
+  padding: 7px 14px 6px;
+  background: rgba(255, 255, 255, 0.55);
+  mix-blend-mode: multiply;
+  transform: translate(-50%, -50%) rotate(-8deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .seal {
+    animation: seal-slam 1.3s cubic-bezier(0.2, 1.4, 0.35, 1) both;
+  }
+  @keyframes seal-slam {
+    0% { opacity: 0; transform: translate(-50%, -50%) rotate(-14deg) scale(2.1); }
+    18% { opacity: 0.96; transform: translate(-50%, -50%) rotate(-8deg) scale(0.94); }
+    30% { transform: translate(-50%, -50%) rotate(-8deg) scale(1.02); }
+    42% { transform: translate(-50%, -50%) rotate(-8deg) scale(1); }
+    78% { opacity: 0.96; }
+    100% { opacity: 0; transform: translate(-50%, -54%) rotate(-8deg) scale(1); }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seal { opacity: 0.9; }
+}
+
+/* ===== 底栏·节目单（五个等位频道，无特权钮） ===== */
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: stretch;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 7px 0 6px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.tab-item .anticon {
+  font-size: 21px;
+  transition: transform 0.15s ease;
+}
+.tab-item.on {
+  color: var(--rose);
+  font-weight: 600;
+}
+.tab-item:active .anticon {
+  transform: scale(0.88);
+}
+
+/* ===== 胶囊分类横滑（小红书顶部频道栏） ===== */
+.pillrow {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+.pillrow::-webkit-scrollbar {
+  display: none;
+}
+.pill {
+  flex-shrink: 0;
+  padding: 7px 15px;
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink-2);
+  font-size: 13px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.pill.on {
+  background: var(--rose-soft);
+  color: var(--rose);
+  border-color: #f0bfcf;
+  font-weight: 600;
+}
+.pill:active {
+  transform: scale(0.95);
+}
+
+/* ===== 卡册（binder）：均匀网格，白边小卡像活页夹的一页 ===== */
+.binder {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media (min-width: 768px) {
+  .binder {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+/* 今日候选项：ON AIR 金框 */
+.pcard.onair .pcard-img {
+  outline: 2px solid var(--amber);
+  outline-offset: -2px;
+}
+
+/* ===== 移动端半屏抽屉（底部弹出，圆角） ===== */
+.sheet-grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  margin: 2px auto 8px;
+}
+
+
 .chat-root {
   display: flex;
   flex-direction: column;
@@ -342,6 +527,13 @@ img {
   background: var(--paper);
   position: sticky;
   bottom: 0;
+}
+
+/* ===== 移动端：自定义底栏后聊天区高度 ===== */
+@media (max-width: 767px) {
+  .chat-root {
+    height: calc(100dvh - 62px - env(safe-area-inset-bottom));
+  }
 }
 
 /* ===== 入场动效（尊重系统减弱动态） ===== */

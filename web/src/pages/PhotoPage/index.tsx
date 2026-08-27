@@ -1,7 +1,7 @@
 /** 拍照页：计划列表 + 创建（LLM 分镜）+ 详情（时间窗/分镜/checklist）+ 上传复盘 */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Button, Card, List, Tag, Modal, Form, Input, Select, DatePicker, App, Empty, Space,
+  Button, Card, List, Tag, Form, Input, Select, DatePicker, App, Empty, Space,
   Timeline, Checkbox, Upload, Carousel, Image, Alert, Spin, Flex, Typography,
 } from 'antd';
 import { PlusOutlined, CameraOutlined, ReloadOutlined, LeftOutlined } from '@ant-design/icons';
@@ -9,6 +9,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import type { PhotoPlan, PhotoReview } from '../../types';
 import { request, upload } from '../../api';
 import { img, useUiStore } from '../../stores';
+import Sheet from '../../components/Sheet';
 
 const SCENES: PhotoPlan['location']['sceneType'][] = ['街拍', '咖啡店', '公园', '天台', '夜景'];
 const VERDICT: Record<string, { color: string; label: string }> = {
@@ -72,20 +73,21 @@ export default function PhotoPage() {
     <div style={{ padding: 16 }}>
       <Button
         type="primary"
+        shape="round"
         icon={<PlusOutlined />}
         block
         className="touchable"
         style={{ marginBottom: 16 }}
         onClick={() => setCreateOpen(true)}
       >
-        新建拍照计划
+        新建企划
       </Button>
       <Spin spinning={loading}>
         {plans.length === 0 && !loading ? (
           <Empty
             description={
               <span style={{ color: '#6F6678', lineHeight: 1.8 }}>
-                还没有拍摄计划
+                还没有企划
                 <br />
                 新建一个，小镜来排分镜和黄金时刻
               </span>
@@ -106,11 +108,11 @@ export default function PhotoPage() {
                       <div>
                         <div style={{ marginBottom: 4, color: '#6F6678' }}>{p.date} · {p.location.sceneType} · {p.location.name}</div>
                         <Space size={4} wrap>
-                          <Tag color={p.status === 'reviewed' ? 'green' : p.status === 'shot' ? 'blue' : 'default'} style={{ margin: 0 }}>
+                          <span className={`pchip ${p.status === 'reviewed' ? 'pchip-gold' : p.status === 'shot' ? 'pchip-rose' : ''}`}>
                             {p.status === 'reviewed' ? '已复盘' : p.status === 'shot' ? '已拍' : '待拍'}
-                          </Tag>
-                          <Tag style={{ margin: 0, background: '#FAF6F3', border: 'none', color: '#6F6678' }}>{p.shots.length} 镜</Tag>
-                          {p.source === 'llm' && <Tag color="magenta" style={{ margin: 0 }}>小镜分镜</Tag>}
+                          </span>
+                          <span className="pchip">{p.shots.length} 镜</span>
+                          {p.source === 'llm' && <span className="pchip pchip-rose">小镜分镜</span>}
                         </Space>
                       </div>
                     }
@@ -122,12 +124,10 @@ export default function PhotoPage() {
         )}
       </Spin>
 
-      <Modal
-        title="新建拍照计划"
+      <Sheet
+        title="新建企划"
         open={createOpen}
-        footer={null}
-        onCancel={() => setCreateOpen(false)}
-        destroyOnHidden
+        onClose={() => setCreateOpen(false)}
       >
         <Form form={form} layout="vertical" onFinish={create} initialValues={{ sceneType: '街拍', date: dayjs().add(1, 'day') }}>
           <Form.Item name="theme" label="主题" rules={[{ required: true, message: '比如：周六下午安福路街拍' }]}>
@@ -142,11 +142,11 @@ export default function PhotoPage() {
           <Form.Item name="location" label="地点" rules={[{ required: true }]}>
             <Input placeholder="安福路 / 永康路 / 徐汇滨江" />
           </Form.Item>
-          <Button type="primary" htmlType="submit" block loading={creating} className="touchable">
+          <Button type="primary" htmlType="submit" block shape="round" loading={creating} className="touchable">
             生成分镜计划（约 10 秒）
           </Button>
         </Form>
-      </Modal>
+      </Sheet>
     </div>
   );
 }
@@ -219,12 +219,9 @@ function PlanDetail({ plan, onBack }: { plan: PhotoPlan; onBack: () => void }) {
       <div className="hero rise" style={{ marginBottom: 14 }}>
         <div className="hero-top">
           <span className="eyebrow">CALL SHEET · {plan.id.split('-').pop()?.toUpperCase()}</span>
-          <Tag
-            color={plan.status === 'reviewed' ? 'green' : plan.status === 'shot' ? 'blue' : 'default'}
-            style={{ margin: 0 }}
-          >
+          <span className={`pchip ${plan.status === 'reviewed' ? 'pchip-gold' : plan.status === 'shot' ? 'pchip-rose' : ''}`}>
             {plan.status === 'reviewed' ? '已复盘' : plan.status === 'shot' ? '已拍' : '待拍'}
-          </Tag>
+          </span>
         </div>
         <h1 className="hero-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Button size="small" type="text" icon={<LeftOutlined />} onClick={onBack} style={{ marginLeft: -7 }} />
@@ -257,7 +254,7 @@ function PlanDetail({ plan, onBack }: { plan: PhotoPlan; onBack: () => void }) {
               <div style={{ paddingBottom: 4 }}>
                 <div style={{ fontWeight: 600 }}>
                   {s.no}. {s.place}
-                  <Tag style={{ marginLeft: 8 }}>{s.pose}</Tag>
+                  <span className="pchip pchip-rose" style={{ marginLeft: 8 }}>{s.pose}</span>
                 </div>
                 <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
                   <div>机位：{s.angle}｜{s.framing}</div>
@@ -273,7 +270,7 @@ function PlanDetail({ plan, onBack }: { plan: PhotoPlan; onBack: () => void }) {
       {/* 道具 + checklist */}
       <Card size="small" title="道具与出发清单" style={{ marginBottom: 12 }}>
         <Flex gap={6} wrap style={{ marginBottom: 10 }}>
-          {plan.props.map((p) => <Tag key={p} color="orange">{p}</Tag>)}
+          {plan.props.map((p) => <span key={p} className="pchip pchip-gold">{p}</span>)}
         </Flex>
         <Checkbox.Group value={checked} onChange={(v) => toggleCk(v as string[])} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {plan.checklist.map((c) => (
