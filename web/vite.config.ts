@@ -10,12 +10,10 @@ export default defineConfig({
       '/api': 'http://localhost:4290',
       '/workspace': 'http://localhost:4290',
     },
+    // 允许 import 项目根的 shared/types.ts
+    fs: { allow: [resolve(__dirname, '..')] },
   },
   resolve: {
     alias: { '@': resolve(__dirname, 'src') },
-  },
-  // 允许 import 项目根的 shared/types.ts
-  server: {
-    fs: { allow: [resolve(__dirname, '..')] },
   },
 });
