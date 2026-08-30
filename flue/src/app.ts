@@ -1,44 +1,56 @@
 import { createProvider } from '@earendil-works/pi-ai';
 import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy';
-import { zaiCodingCnProvider } from '@earendil-works/pi-ai/providers/zai-coding-cn';
 import { setProvider } from '@flue/runtime';
 import { createAgentRouter } from '@flue/runtime/routing';
 import { Hono } from 'hono';
-import { GLM_API_KEY, GLM_BASE_URL, config } from '../../server/config.ts';
+import { LLM_API_KEY, LLM_BASE_URL, config } from '../../server/config.ts';
 import { dispatch } from '@flue/runtime';
 import { Stylist } from './agents/stylist.ts';
 import { DailyOutfit } from './agents/daily-outfit.ts';
 import { PhotoReview } from './agents/photo-review.ts';
 
-// Flue 官方 zai provider 使用 ZAI_CODING_CN_API_KEY。只在当前进程内
-// 建立别名，不把密钥写回 ~/.pi/models.json 或项目文件。
-if (GLM_API_KEY && !process.env.ZAI_CODING_CN_API_KEY) {
-  process.env.ZAI_CODING_CN_API_KEY = GLM_API_KEY;
-}
+// 密钥来自 server/config.ts（GLM_API_KEY env > ~/.pi/agent/models.json 的 opencode-luna apiKey）。
+// 内联 ApiKeyAuth 直接解析，不写回任何配置文件。
 
-const upstream = zaiCodingCnProvider();
-const template = upstream.getModels().find((model) => model.id === 'glm-5v-turbo');
-if (!template) throw new Error('Flue 内置 zai provider 缺少多模态模型模板');
-
-const glmModel = {
-  ...template,
-  id: config.models.text,
-  name: 'GLM-5.3-Flash',
-  baseUrl: GLM_BASE_URL,
-  input: ['text', 'image'] as ('text' | 'image')[],
+// DeepSeek 两个模型：deepseek-v4-flash（文本）/ deepseek-v4-flash-vision-exp（视觉）。
+// 都是 reasoning 模型 —— compat.thinkingFormat 用 "deepseek"（reasoning_content 流）。
+const baseModel = {
+  api: 'openai-completions' as const,
+  provider: 'opencode-luna' as const,
+  baseUrl: LLM_BASE_URL,
+  reasoning: false, // DeepSeek：关 thinking 提速（thinkingFormat deepseek → 发 thinking:{type:disabled}）
+  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+  compat: {
+    supportsStore: false,
+    supportsDeveloperRole: false,
+    supportsReasoningEffort: false,
+    maxTokensField: 'max_tokens',
+    thinkingFormat: 'deepseek' as const,
+  },
+  contextWindow: 1_048_576,
+  maxTokens: 16384,
 };
 
 setProvider(createProvider({
-  id: 'glm',
-  name: '智谱 GLM',
-  baseUrl: GLM_BASE_URL,
-  auth: upstream.auth,
-  models: [glmModel],
+  id: 'opencode-luna',
+  name: 'OpenCode Luna (DeepSeek)',
+  baseUrl: LLM_BASE_URL,
+  auth: {
+    apiKey: {
+      name: 'OpenCode Luna API key',
+      resolve: async () =>
+        LLM_API_KEY ? { auth: { apiKey: LLM_API_KEY }, source: 'opencode-luna (~/.pi/agent/models.json)' } : undefined,
+    },
+  },
+  models: [
+    { ...baseModel, id: config.models.text, name: 'DeepSeek V4 Flash', input: ['text'] },
+    { ...baseModel, id: config.models.vision, name: 'DeepSeek V4 Flash Vision', input: ['text', 'image'] },
+  ],
   api: openAICompletionsApi(),
 }));
 
 const app = new Hono();
-app.get('/health', (c) => c.json({ ok: true, provider: 'glm', model: config.models.text }));
+app.get('/health', (c) => c.json({ ok: true, provider: 'opencode-luna', models: [config.models.text, config.models.vision] }));
 app.route('/stylist', createAgentRouter(Stylist));
 app.route('/daily-outfit', createAgentRouter(DailyOutfit));
 app.route('/photo-review', createAgentRouter(PhotoReview));

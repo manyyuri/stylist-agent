@@ -18,7 +18,7 @@
 **后端**（Node 20+，ESM + TypeScript，零 ORM）
 
 - **Express 5** REST（profile/wardrobe/weather/OOTD/plans）
-- **Flue Agent Runtime**：GLM-5.3-Flash + 持久化会话、工具调用、恢复与事件流；同一模型同时处理文本与图片
+- **Flue Agent Runtime**：DeepSeek（opencode-luna 网关）+ 持久化会话、工具调用、恢复与事件流；同一模型同时处理文本与图片
 - **zod 4** 定义工具参数 → `z.toJSONSchema()` 生成 function calling schema，强校验防幻觉
 - **规则引擎 + LLM 混合编排**（cook5 哲学）：结构合法性（top+bottom / dress、类别覆盖、温度桶 0-10/10-24/24-40、正式度匹配、色彩和谐 HSL 色距、锚点匹配、穿着频率惩罚）由确定性代码保证，LLM 只负责挑选与叙事 —— **LLM 永远无法编造不存在的单品**
 - **sharp 图片管线**：EXIF 方向转正 → 限宽 1280px JPEG（原图留 `orig/` 不对外）
@@ -33,7 +33,7 @@
 - 移动端底部 Tab、安全区适配、触控目标 ≥44px、单卡式信息架构
 - 工具卡片范式：SSE `tool-result.payload` 按类型渲染成穿搭卡/计划卡（ChatGPT Plugins / Cursor 同款交互）
 
-**AI 降级设计**：未配置 `GLM_API_KEY`（也兼容 `ZHIPU_API_KEY`）时一切可用 —— OOTD 走规则引擎 + 模板叙事，拍照计划走 shots.md 兜底分镜，衣橱识别降级为手动填写，对话返回友好提示。
+**AI 降级设计**：未配置 LLM key 时一切可用 —— OOTD 走规则引擎 + 模板叙事，拍照计划走 shots.md 兜底分镜，衣橱识别降级为手动填写，对话返回友好提示。
 
 ## 快速开始
 
@@ -43,14 +43,11 @@ npm install
 cd web && npm install && cd ..
 cd flue && npm install && cd ..
 
-# 2.（可选但推荐）配置智谱 GLM key —— 不配也能跑（见降级说明）
-export GLM_API_KEY=xxx   # 智谱 API Key；建议写进 ~/.zshrc
-# Flue provider 也可直接读取同一密钥（由 flue/src/app.ts 做进程内映射）
-# GLM-5.3-Flash 的 OpenAI 兼容接口
-# 默认地址：https://open.bigmodel.cn/api/coding/paas/v4
-# 如使用普通智谱开放平台接口，可覆盖：
-# export GLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
-# 阿里云百炼控制台获取：https://bailian.console.aliyun.com/
+# 2.（可选但推荐）配置 LLM key —— 不配也能跑（见降级说明）
+# 自动读取 ~/.pi/agent/models.json 的 opencode-luna apiKey；也可显式注入：
+export GLM_API_KEY=xxx
+# 默认网关 https://opencode.ai/zen/go/v1（OpenAI 兼容，DeepSeek 模型）：
+# 文本 deepseek-v4-flash / 视觉 deepseek-v4-flash-vision-exp；可用 GLM_BASE_URL 覆盖
 
 # 3. 一键构建 + 启动
 npm start          # 构建 web + Flue，并同时启动 Express:4290 与 Flue:4291
@@ -120,7 +117,7 @@ npm run typecheck # 前后端 tsc
 │   ├── ootd.ts             # OOTD 混合编排（规则选品 + LLM 叙事）
 │   ├── plans.service.ts    # 拍照计划（地理编码 + LLM 分镜 + 兜底）
 │   ├── review.service.ts   # 视觉复盘 + 出片反哺
-│   ├── vision.ts / llm.ts  # GLM-5.3-Flash 多模态 / chatJSON(zod 校验+重试)
+│   ├── vision.ts / llm.ts  # DeepSeek 多模态 / chatJSON(zod 校验+重试)
 │   ├── weather.ts / sun.ts # open-meteo + 黄金时刻天文计算
 │   └── routes/             # REST 路由
 ├── flue/

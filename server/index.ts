@@ -54,7 +54,7 @@ app.use('/api/plans', plansRouter);
 app.use('/api/review', reviewRouter);
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, llm: !!GLM_API_KEY, provider: 'glm', model: config.models.text, dataDir: config.dataDir });
+  res.json({ ok: true, llm: !!GLM_API_KEY, provider: 'opencode-luna', model: config.models.text, vision: config.models.vision, dataDir: config.dataDir });
 });
 
 app.get('/api/anchors', (_req, res) => {
@@ -87,7 +87,7 @@ app.listen(config.port, '0.0.0.0', () => {
 │  iPhone Safari:  http://${os.hostname().replace(/\..*/, '')}.local:${config.port}${' '.repeat(Math.max(0, 3 - String(config.port).length))}│
 │  局域网 IP:       http://${lan}:${config.port}  │
 │  工作区:          ${config.dataDir}  │
-│  大模型:          ${GLM_API_KEY ? `GLM 已配置（${config.models.text}，多模态）` : '⚠ 未配置 GLM_API_KEY，规则引擎降级可用'}  │
+│  大模型:          ${GLM_API_KEY ? `DeepSeek 已配置（${config.models.text} + 视觉）` : '⚠ 未配置 LLM key，规则引擎降级可用'}  │
 └──────────────────────────────────────────────┘
   （远程访问：Mac 与 iPhone 都开 Tailscale，用 100.x IP 访问同端口）
 `);

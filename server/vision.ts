@@ -1,10 +1,12 @@
 /**
- * 视觉管线 —— GLM-5.3-Flash 多模态三条独立管线，全部：
+ * 视觉管线 —— DeepSeek-V4-Flash-Vision-Exp 多模态三条独立管线，全部：
  *   压缩 JPEG base64 → 结构化 prompt → zod 校验 → 失败重试 1 次。
  *
  * 隐私约定：原图只落本地工作区，发给云端的是 ≤1280px 的压缩 JPEG。
+ * 注意：该模型是 reasoning 模型，max_tokens 给足（8192）以免 content 被思考耗尽。
  */
 import { z } from 'zod';
+import OpenAI from 'openai';
 import { visionClient } from './llm.ts';
 import { config } from './config.ts';
 import { extractJSON } from './llm.ts';
@@ -58,7 +60,7 @@ export type ReviewDraft = z.infer<typeof reviewSchema>;
 // ---------- 底层调用 ----------
 
 async function visionJSON<T>(schema: z.ZodType<T>, prompt: string, images: string[]): Promise<T> {
-  if (!visionClient) throw new Error('GLM_API_KEY 未配置');
+  if (!visionClient) throw new Error('LLM_API_KEY 未配置（可从 ~/.pi/agent/models.json 的 opencode-luna 读取）');
   const content: unknown[] = [{ type: 'text', text: prompt }];
   for (const url of images) content.push({ type: 'image_url', image_url: { url } });
 
@@ -67,9 +69,10 @@ async function visionJSON<T>(schema: z.ZodType<T>, prompt: string, images: strin
     const res = await visionClient.chat.completions.create({
       model: config.models.vision,
       messages: [{ role: 'user', content } as never],
-      max_tokens: 3072,
+      max_tokens: 8192, // reasoning 视觉模型：留足 token 给 content
       temperature: 0.2,
-    });
+      thinking: { type: 'disabled' }, // DeepSeek：关 reasoning 提速（视觉 8s→~2s）
+    } as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming);
     const text = res.choices[0]?.message?.content ?? '';
     try {
       const parsed = schema.safeParse(extractJSON(text));

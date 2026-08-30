@@ -2,12 +2,16 @@
  * 知识库加载器 —— knowledge/ 目录随代码内置，启动时一次性读入内存。
  * poses.md 的编号表是 LLM 生成分镜时 pose 字段的唯一合法取值来源（防幻觉）。
  */
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AnchorCard, MakeupTemplate } from '../shared/types.ts';
 
-const KNOWN = resolve(dirname(fileURLToPath(import.meta.url)), '../knowledge');
+// 知识库目录：cwd（Express 与 Flue 都以项目根为工作目录）优先，
+// import.meta.url 兜底——bundle 里 import.meta.url 指向 flue/dist，不能直接用。
+const KNOWN = existsSync(resolve(process.cwd(), 'knowledge'))
+  ? resolve(process.cwd(), 'knowledge')
+  : resolve(dirname(fileURLToPath(import.meta.url)), '../knowledge');
 
 function loadDir<T>(dir: string): T[] {
   return readdirSync(dir)

@@ -21,5 +21,6 @@
 - [ ] #12 场合×锚点交叉：每个风格都有它的通勤版（如 NewJeans 通勤 vs aespa 通勤） #P2 #5 #added:2026-08-30 #source:产品
 - [ ] #13 档案页残留 antd Tag 杂色归入 pchip 三色体系（打磨） #P3 #1 #added:2026-08-30 #source:用户
 - [ ] #14 首页场合 tab 不切换：路由对场合幂等短路 + history 未合并（已修，工作区已实现） #P0 #1 #added:2026-08-30 #source:bug
+- [ ] #15 LLM 切换到 opencode-luna 网关的 DeepSeek 两个模型（deepseek-v4-flash + vision-exp，读 ~/.pi/agent/models.json key，关 thinking 提速） #P1 #3 #added:2026-08-30 #source:用户
 
 <!-- 新功能点追加到这里：- [ ] <描述> #P<优先级> #<点数> #added:<日期> #source:<来源> -->

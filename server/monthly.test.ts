@@ -1,14 +1,19 @@
 /**
  * 月度复盘单测 —— 聚合 + 锚点漂移建议（用临时 dataDir 隔离，不碰真实 ~/stylist-data）。
  * 运行：npm test（tsx --test）
+ * 注意：测试必须走规则兜底叙事，因此先把 LLM key 环境变量置空（config.ts 在 import 时解析）。
  */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { config } from './config.ts';
-import { buildMonthlyReport } from './monthly.ts';
+
+process.env.GLM_API_KEY = '';
+process.env.ZHIPU_API_KEY = '';
+
+const { config } = await import('./config.ts');
+const { buildMonthlyReport } = await import('./monthly.ts');
 
 let dir = '';
 

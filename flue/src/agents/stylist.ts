@@ -1,12 +1,12 @@
 'use agent';
 
 import { useModel } from '@flue/runtime';
-import { GLM_API_KEY } from '../../../server/config.ts';
+import { LLM_API_KEY } from '../../../server/config.ts';
 import { XIAOPD_SYSTEM } from '../../../server/prompts.ts';
 import { registerBusinessTools, registerDurableBusinessTools } from '../tools.ts';
 
 export function Stylist() {
-  useModel('glm/glm-5.3-flash');
+  useModel('opencode-luna/deepseek-v4-flash-vision-exp');
   registerBusinessTools(['get_profile', 'query_wardrobe', 'get_weather', 'recommend_makeup', 'wardrobe_gap_check']);
   registerDurableBusinessTools(['generate_outfit', 'log_outfit_feedback', 'create_photo_plan', 'review_photo_session']);
 
@@ -19,8 +19,8 @@ export function Stylist() {
 - 写操作失败时如实说明，不得声称成功；
 - 图片识别结果是草稿，必须等待用户确认后才能入库。
 
-当前模型：GLM-5.3-Flash，多模态输入由同一模型处理。
-${GLM_API_KEY ? '' : '\n当前未配置 GLM_API_KEY，请说明离线状态。'}`;
+当前模型：DeepSeek-V4-Flash（视觉版），多模态输入由同一模型处理。
+${LLM_API_KEY ? '' : '\n当前未配置 LLM_API_KEY，请说明离线状态。'}`;
 }
 
 Stylist.agentName = 'stylist';

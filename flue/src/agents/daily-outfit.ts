@@ -4,7 +4,7 @@ import { useModel } from '@flue/runtime';
 import { registerBusinessTools, registerDurableBusinessTools } from '../tools.ts';
 
 export function DailyOutfit() {
-  useModel('glm/glm-5.3-flash');
+  useModel('opencode-luna/deepseek-v4-flash');
   registerBusinessTools(['get_profile', 'query_wardrobe', 'get_weather']);
   registerDurableBusinessTools(['generate_outfit']);
   return `你是每日穿搭任务 Agent。收到每日任务后，读取档案、天气和真实衣橱，调用 generate_outfit 生成当日 OOTD。

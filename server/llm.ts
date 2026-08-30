@@ -1,7 +1,9 @@
 /**
- * 智谱 GLM LLM 客户端 —— 走 OpenAI 兼容模式。
+ * LLM 客户端 —— OpenAI 兼容网关（opencode.ai/zen/go/v1，DeepSeek 模型）。
  *
- * GLM-5.3-Flash 同时承担文本和视觉请求；具体模型名由 config.json 控制。
+ * 文本：deepseek-v4-flash / 视觉：deepseek-v4-flash-vision-exp（见 config.json）。
+ * 两个都是 reasoning 模型：思考写在 reasoning_content，最终答案在 content——
+ * max_tokens 必须给足，否则全被思考吃掉、content 会空。
  * chatJSON<T>() 通过 JSON mode + zod 校验 + 失败重试，把概率模型的自由文本
  * 收敛成类型安全的结构化数据。
  */
@@ -9,13 +11,14 @@ import OpenAI from 'openai';
 import type { ZodType } from 'zod';
 import { config, GLM_API_KEY, GLM_BASE_URL } from './config.ts';
 
+// reasoning 文本模型：超时放宽到 120s
 export const textClient = GLM_API_KEY
-  ? new OpenAI({ apiKey: GLM_API_KEY, baseURL: GLM_BASE_URL, timeout: 60_000 })
+  ? new OpenAI({ apiKey: GLM_API_KEY, baseURL: GLM_BASE_URL, timeout: 120_000 })
   : null;
 
-// GLM-5.3-Flash 支持多模态输入，文本和视觉共用 provider/key，超时略长。
+// 视觉模型是 reasoning + 多模态，单张真实照片 ~8s；多张复盘放宽到 5 分钟
 export const visionClient = GLM_API_KEY
-  ? new OpenAI({ apiKey: GLM_API_KEY, baseURL: GLM_BASE_URL, timeout: 90_000 })
+  ? new OpenAI({ apiKey: GLM_API_KEY, baseURL: GLM_BASE_URL, timeout: 300_000 })
   : null;
 
 export function llmAvailable(): boolean {
@@ -39,7 +42,7 @@ export async function chatJSON<T>(opts: {
   model?: string;
   maxTokens?: number;
 }): Promise<T> {
-  if (!textClient) throw new Error('GLM_API_KEY 未配置');
+  if (!textClient) throw new Error('LLM_API_KEY 未配置（可从 ~/.pi/agent/models.json 的 opencode-luna 读取）');
   const model = opts.model ?? config.models.text;
   let lastErr: unknown = null;
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -47,9 +50,10 @@ export async function chatJSON<T>(opts: {
       model,
       messages: opts.messages,
       response_format: { type: 'json_object' },
-      max_tokens: opts.maxTokens ?? 2048,
+      max_tokens: opts.maxTokens ?? 4096, // reasoning 模型要留足 token 给 content
       temperature: 0.7,
-    });
+      thinking: { type: 'disabled' }, // DeepSeek：关 reasoning 提速（OOTD 86s→~7s）
+    } as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming);
     const text = res.choices[0]?.message?.content ?? '';
     try {
       const parsed = opts.schema.safeParse(extractJSON(text));
