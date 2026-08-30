@@ -1,21 +1,21 @@
 /**
- * DashScope LLM 客户端 —— 走 OpenAI 兼容模式（openai SDK + baseURL 指向百炼）。
+ * 智谱 GLM LLM 客户端 —— 走 OpenAI 兼容模式。
  *
- * 两个学习点：
- * 1. OpenAI 兼容层是国内大模型的事实标准，换模型只改 baseURL + model；
- * 2. chatJSON<T>()：response_format json_object + zod 校验 + 失败重试 1 次，
- *    把「概率模型的自由文本」收敛成「类型安全的结构化数据」。
+ * GLM-5.3-Flash 同时承担文本和视觉请求；具体模型名由 config.json 控制。
+ * chatJSON<T>() 通过 JSON mode + zod 校验 + 失败重试，把概率模型的自由文本
+ * 收敛成类型安全的结构化数据。
  */
 import OpenAI from 'openai';
 import type { ZodType } from 'zod';
-import { config, DASHSCOPE_API_KEY, DASHSCOPE_BASE_URL } from './config.ts';
+import { config, GLM_API_KEY, GLM_BASE_URL } from './config.ts';
 
-export const textClient = DASHSCOPE_API_KEY
-  ? new OpenAI({ apiKey: DASHSCOPE_API_KEY, baseURL: DASHSCOPE_BASE_URL, timeout: 60_000 })
+export const textClient = GLM_API_KEY
+  ? new OpenAI({ apiKey: GLM_API_KEY, baseURL: GLM_BASE_URL, timeout: 60_000 })
   : null;
 
-export const visionClient = DASHSCOPE_API_KEY
-  ? new OpenAI({ apiKey: DASHSCOPE_API_KEY, baseURL: DASHSCOPE_BASE_URL, timeout: 90_000 })
+// GLM-5.3-Flash 支持多模态输入，文本和视觉共用 provider/key，超时略长。
+export const visionClient = GLM_API_KEY
+  ? new OpenAI({ apiKey: GLM_API_KEY, baseURL: GLM_BASE_URL, timeout: 90_000 })
   : null;
 
 export function llmAvailable(): boolean {
@@ -39,7 +39,7 @@ export async function chatJSON<T>(opts: {
   model?: string;
   maxTokens?: number;
 }): Promise<T> {
-  if (!textClient) throw new Error('DASHSCOPE_API_KEY 未配置');
+  if (!textClient) throw new Error('GLM_API_KEY 未配置');
   const model = opts.model ?? config.models.text;
   let lastErr: unknown = null;
   for (let attempt = 0; attempt < 2; attempt++) {

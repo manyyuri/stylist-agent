@@ -8,13 +8,18 @@
     "server": "tsx server/index.ts",
     "dev:server": "tsx watch server/index.ts",
     "dev:web": "npm --prefix web run dev",
-    "build": "npm --prefix web run build",
+    "dev:flue": "npm --prefix flue run dev",
+    "build:flue": "npm --prefix flue run build",
+    "build": "npm run build:flue && npm --prefix web run build",
     "typecheck": "tsc -p tsconfig.json --noEmit && npm --prefix web run typecheck",
-    "test": "tsx --test server/rules.test.ts server/sun.test.ts",
-    "start": "npm run build && tsx server/index.ts"
+    "start:server": "tsx server/index.ts",
+    "start:flue": "PORT=4291 node flue/dist/server.mjs",
+    "test": "tsx --test server/rules.test.ts server/sun.test.ts server/monthly.test.ts",
+    "start": "npm run build && tsx server/start.ts"
   },
   "dependencies": {
     "express": "^5.1.0",
+    "http-proxy-middleware": "^4.2.0",
     "multer": "^2.0.2",
     "openai": "^5.10.0",
     "sharp": "^0.34.4",

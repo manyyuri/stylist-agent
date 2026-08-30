@@ -4,10 +4,11 @@
  * 学习点：AI 应用的「工具卡片」模式 —— SSE 的 tool-result 事件带结构化 payload，
  * 不渲染成气泡文本而是渲染成复用的业务卡片（穿搭卡/计划卡），
  * 这是 ChatGPT Plugins / Cursor / 各种 Copilot 的通用交互范式。
+ * 小PD 化：工具调用不露调试回显，翻译成节目导演的工作台叙事（翻衣橱/对天气/出方案）。
  */
 import { useRef, useState } from 'react';
 import { Bubble, Sender } from '@ant-design/x';
-import { Card, Tag, App as AntApp, Image, Typography } from 'antd';
+import { Card, App as AntApp, Image, Typography } from 'antd';
 import { PaperClipOutlined } from '@ant-design/icons';
 import type { ChatEvent, Ootd, PhotoPlan } from '../../types';
 import { streamChat } from '../../api/chatStream';
@@ -25,7 +26,21 @@ const nextKey = () => `m${++keySeq}`;
 
 const SUGGESTIONS = ['今天穿什么？', '明天约会，帮我配一套', '周末想去安福路街拍，做个拍照计划', '我的衣橱还缺什么？'];
 
-/** 工具事件卡片：按 payload 类型渲染结构化 UI */
+/** 工具动作 → 小PD 的过程叙事（把调试回显翻译成导演的工作台） */
+const TOOL_VERB: Record<string, string> = {
+  get_profile: '翻了你的艺人档案',
+  query_wardrobe: '翻了你的服装间',
+  get_weather: '对了今日天气',
+  recommend_makeup: '定了妆造方向',
+  wardrobe_gap_check: '盘了衣橱缺口',
+  generate_outfit: '出了一套造型方案',
+  log_outfit_feedback: '记下了这次反馈',
+  create_photo_plan: '排好了拍摄企划',
+  review_photo_session: '复盘了这组样片',
+};
+const toolVerb = (name: string) => TOOL_VERB[name] ?? `调用了 ${name}`;
+
+/** 工具事件：小PD 的过程卡（翻衣橱 / 对天气 / 出方案 → 结构化卡片） */
 function ToolEventCard({ raw }: { raw: string }) {
   let ev: { kind: 'call' | 'result'; name: string; summary?: string; ok?: boolean; payload?: unknown };
   try {
@@ -33,10 +48,12 @@ function ToolEventCard({ raw }: { raw: string }) {
   } catch {
     return null;
   }
+  const verb = toolVerb(ev.name);
   if (ev.kind === 'call') {
     return (
-      <div style={{ fontSize: 12, color: '#999', padding: '2px 8px' }}>
-        🔧 正在调用 <b>{ev.name}</b> …
+      <div className="pd-step">
+        <span className="pd-dot" />
+        <span>小PD · {verb}…</span>
       </div>
     );
   }
@@ -44,10 +61,11 @@ function ToolEventCard({ raw }: { raw: string }) {
   const isOotd = !!p && typeof p === 'object' && 'narrative' in p && 'makeup' in p;
   const isPlan = !!p && typeof p === 'object' && 'shots' in p && 'timeWindows' in p;
   return (
-    <div style={{ padding: '4px 0' }}>
-      <Tag color={ev.ok ? 'green' : 'red'} style={{ marginBottom: isOotd || isPlan ? 8 : 0 }}>
-        {ev.ok ? '✓' : '✗'} {ev.name}：{ev.summary}
-      </Tag>
+    <div className="pd-result">
+      <div className="pd-result-head">
+        <span className="pchip pchip-rose">{ev.ok ? '✓' : '✗'} 小PD · {verb}</span>
+        {ev.summary && <span className="pd-summary">{ev.summary}</span>}
+      </div>
       {isOotd && <OutfitCard ootd={p as Ootd} />}
       {isPlan && <PlanMiniCard plan={p as PhotoPlan} />}
     </div>
@@ -56,19 +74,29 @@ function ToolEventCard({ raw }: { raw: string }) {
 
 function PlanMiniCard({ plan }: { plan: PhotoPlan }) {
   return (
-    <Card size="small" title={`📸 ${plan.theme}`} extra={<Tag color="pink">{plan.location.sceneType}</Tag>}>
-      <div style={{ fontSize: 12, color: '#666' }}>
-        {plan.date} · {plan.location.name} · {plan.shots.length} 个分镜
+    <Card
+      size="small"
+      styles={{ header: { border: 'none' }, body: { padding: '10px 12px 12px' } }}
+      title={
+        <div>
+          <div className="eyebrow eyebrow-rose">SHOOT PLAN · {plan.date}</div>
+          <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2 }}>{plan.theme}</div>
+        </div>
+      }
+      extra={<span className="pchip pchip-gold">{plan.location.sceneType}</span>}
+    >
+      <div style={{ fontSize: 12, color: '#6F6678' }}>
+        {plan.location.name} · {plan.shots.length} 个分镜
       </div>
-      <div style={{ marginTop: 6 }}>
+      <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {plan.timeWindows.slice(0, 2).map((w) => (
-          <Tag key={w.type} color={w.type === '黄金时刻' ? 'gold' : 'default'}>
+          <span key={w.type} className={w.type === '黄金时刻' ? 'pchip pchip-gold' : 'pchip'}>
             {w.type} {w.start}-{w.end}
-          </Tag>
+          </span>
         ))}
       </div>
       <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-        详情去「拍照」页查看
+        详情去「企划」页查看
       </Typography.Text>
     </Card>
   );
@@ -83,7 +111,7 @@ export default function ChatPage() {
       key: 'hello',
       role: 'ai',
       content:
-        '我是小镜，你的女团风造型师 👋\n可以问我「今天穿什么」，也可以让我安排周末的拍照计划。回答基于你的真实衣橱，绝不瞎编。',
+        '我是小PD，这家「一个人的企划社」的节目导演兼造型师 👋\n负责你的每日通告单：今天穿什么、定什么妆、周末去哪拍。回答基于你的真实衣橱，绝不瞎编。',
     },
   ]);
   const [input, setInput] = useState('');
@@ -132,7 +160,7 @@ export default function ChatPage() {
             content: JSON.stringify({ kind: 'result', name: ev.name, ok: ev.ok, summary: ev.summary, payload: ev.payload }),
           });
         } else if (ev.type === 'done') {
-          setMsgs((ms) => ms.map((x) => (x.key === aiKey && !x.content ? { ...x, content: '（小镜没有多说，看看上面的卡片吧）' } : x)));
+          setMsgs((ms) => ms.map((x) => (x.key === aiKey && !x.content ? { ...x, content: '（小PD没有多说，看看上面的卡片吧）' } : x)));
         } else if (ev.type === 'error') {
           patch(aiKey, `\n⚠️ ${ev.message}`);
         }
@@ -220,7 +248,7 @@ export default function ChatPage() {
           onSubmit={send}
           loading={loading}
           onCancel={() => abortRef.current?.abort()}
-          placeholder="问小镜…（Enter 发送）"
+          placeholder="问小PD…（Enter 发送）"
           prefix={
             <PaperClipOutlined onClick={() => fileRef.current?.click()} style={{ color: '#999', fontSize: 16, padding: 4 }} />
           }

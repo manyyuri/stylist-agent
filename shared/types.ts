@@ -112,6 +112,35 @@ export interface OotdCandidate {
   subscores: { color: number; anchor: number; wear: number; photo: number };
 }
 
+// ===== 月度复盘（小PD 导演复盘 + 锚点漂移建议）=====
+export interface AnchorTrend {
+  anchor: string;
+  name: string;
+  count: number;
+  avgScore: number;
+  liked: number;
+}
+
+export interface AnchorDrift {
+  from: string;
+  fromName: string;
+  to: string;
+  toName: string;
+  reason: string;
+}
+
+export interface MonthlyReport {
+  month: string;
+  days: number;
+  feedback: { liked: number; meh: number; unchosen: number };
+  avgScore: number;
+  source: 'llm' | 'rule';
+  narrative: string;
+  topItems: { id: string; subType: string; colorName: string; photoRating: number; wearCount: number }[];
+  anchorTrends: AnchorTrend[];
+  drift: AnchorDrift | null;
+}
+
 // ===== plans/*/plan.json =====
 export interface Shot {
   no: number;

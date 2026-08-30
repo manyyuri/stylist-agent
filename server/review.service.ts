@@ -1,6 +1,6 @@
 /**
  * 拍后复盘服务 —— 数据闭环的收口：
- *   样片 → qwen-vl 逐张评价 → 精选进 samples/ → colorWin 反哺单品 photoRating
+ *   样片 → GLM-5.3-Flash 多模态逐张评价 → 精选进 samples/ → colorWin 反哺单品 photoRating
  *   → 下次 generateCandidates 的 photoBonus 权重变化 → 推荐越用越准。
  */
 import { readdirSync, copyFileSync, mkdirSync, existsSync } from 'node:fs';

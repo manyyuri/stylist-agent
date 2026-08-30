@@ -2,17 +2,18 @@
  * Express 入口 —— 监听 0.0.0.0，打印 .local 局域网地址（iPhone Safari 直连）。
  */
 import express from 'express';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import os from 'node:os';
-import { config, ROOT_DIR, DASHSCOPE_API_KEY } from './config.ts';
+import { config, ROOT_DIR, GLM_API_KEY } from './config.ts';
 import { ensureDir } from './store.ts';
 import { profileRouter } from './routes/profile.ts';
 import { wardrobeRouter } from './routes/wardrobe.ts';
 import { weatherRouter } from './routes/weather.ts';
 import { ootdRouter } from './routes/ootd.ts';
 import { plansRouter } from './routes/plans.ts';
-import { chatRouter } from './routes/chat.ts';
+import { reviewRouter } from './routes/review.ts';
 import { anchors } from './knowledge.ts';
 
 const app = express();
@@ -29,7 +30,12 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.json({ limit: '50mb' })); // 聊天附图走 base64
+// 先代理 Agent，再解析 Express JSON；否则 express.json 会消费掉 Flue POST body。
+app.use('/agents', createProxyMiddleware({
+  target: process.env.FLUE_URL ?? 'http://127.0.0.1:4291',
+  changeOrigin: true,
+}));
+app.use(express.json({ limit: '50mb' }));
 
 // 工作区图片静态托管（压缩版 JPEG；orig/ 子目录不暴露）
 app.use('/workspace', (req, res, next) => {
@@ -45,10 +51,10 @@ app.use('/api/wardrobe', wardrobeRouter);
 app.use('/api/weather', weatherRouter);
 app.use('/api/ootd', ootdRouter);
 app.use('/api/plans', plansRouter);
-app.use('/api/chat', chatRouter);
+app.use('/api/review', reviewRouter);
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, llm: !!DASHSCOPE_API_KEY, dataDir: config.dataDir });
+  res.json({ ok: true, llm: !!GLM_API_KEY, provider: 'glm', model: config.models.text, dataDir: config.dataDir });
 });
 
 app.get('/api/anchors', (_req, res) => {
@@ -76,12 +82,12 @@ app.listen(config.port, '0.0.0.0', () => {
   const lan = nets[0]?.address ?? '?';
   console.log(`
 ┌──────────────────────────────────────────────┐
-│  小镜 · 女团风形象管家  stylist-agent         │
+│  小PD · 女团风形象管家   stylist-agent       │
 ├──────────────────────────────────────────────┤
 │  iPhone Safari:  http://${os.hostname().replace(/\..*/, '')}.local:${config.port}${' '.repeat(Math.max(0, 3 - String(config.port).length))}│
 │  局域网 IP:       http://${lan}:${config.port}  │
 │  工作区:          ${config.dataDir}  │
-│  大模型:          ${DASHSCOPE_API_KEY ? `DashScope 已配置（${config.models.text}）` : '⚠ 未配置 DASHSCOPE_API_KEY，规则引擎降级可用'}  │
+│  大模型:          ${GLM_API_KEY ? `GLM 已配置（${config.models.text}，多模态）` : '⚠ 未配置 GLM_API_KEY，规则引擎降级可用'}  │
 └──────────────────────────────────────────────┘
   （远程访问：Mac 与 iPhone 都开 Tailscale，用 100.x IP 访问同端口）
 `);

@@ -275,7 +275,7 @@ export default function WardrobePage() {
               <span style={{ color: '#6F6678', lineHeight: 1.8 }}>
                 服装间还是空的
                 <br />
-                拍下今天要穿的几件定妆照，小镜来建档、做搭配
+                拍下今天要穿的几件定妆照，小PD来建档、做搭配
               </span>
             }
             image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -322,7 +322,7 @@ export default function WardrobePage() {
         {recognizing ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
             <Spin size="large" />
-            <p style={{ marginTop: 16, color: '#999' }}>小镜正在识别这件单品…</p>
+            <p style={{ marginTop: 16, color: '#999' }}>小PD正在识别这件单品…</p>
           </div>
         ) : draft ? (
           <>

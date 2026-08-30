@@ -1,5 +1,5 @@
 /* ============================================================
-   小镜设计系统 —— 「今日通告单」
+   小PD设计系统 —— 「今日通告单」
    签名元素：小卡（photocard）白边相纸体系 + 时刻光带渐变
    时刻光带 = 黄金时刻→落日→蓝调时刻（本 app 的核心物理量）
    ============================================================ */
@@ -527,6 +527,58 @@ img {
   background: var(--paper);
   position: sticky;
   bottom: 0;
+}
+
+/* ===== 小PD 过程卡（对话页工具叙事） ===== */
+.pd-step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--ink-2);
+  background: var(--paper);
+  border-radius: 10px;
+  padding: 6px 10px;
+  margin: 4px 0;
+}
+.pd-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rose);
+  flex-shrink: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pd-dot {
+    animation: pdpulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pdpulse {
+    0%,
+    100% {
+      opacity: 0.25;
+      transform: scale(0.85);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+}
+.pd-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0;
+}
+.pd-result-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pd-summary {
+  font-size: 12px;
+  color: var(--ink-3);
 }
 
 /* ===== 移动端：自定义底栏后聊天区高度 ===== */

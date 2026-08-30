@@ -15,7 +15,7 @@ const TABS = [
   { key: 'today', label: '通告', icon: <SunOutlined />, children: <TodayPage /> },
   { key: 'wardrobe', label: '服装间', icon: <SkinOutlined />, children: <WardrobePage /> },
   { key: 'photo', label: '企划', icon: <CameraOutlined />, children: <PhotoPage /> },
-  { key: 'chat', label: '小镜', icon: <MessageOutlined />, children: <ChatPage /> },
+  { key: 'chat', label: '小PD', icon: <MessageOutlined />, children: <ChatPage /> },
   { key: 'profile', label: '艺人档案', icon: <IdcardOutlined />, children: <ProfilePage /> },
 ];
 

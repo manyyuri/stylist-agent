@@ -62,7 +62,7 @@ export default function OutfitCard({ ootd, showActions }: { ootd: Ootd; showActi
       }
       extra={
         ootd.source === 'llm' ? (
-          <span className="pchip pchip-rose">小镜精选</span>
+          <span className="pchip pchip-rose">小PD精选</span>
         ) : (
           <span className="pchip">规则推荐</span>
         )

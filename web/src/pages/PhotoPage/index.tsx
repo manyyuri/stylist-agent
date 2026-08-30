@@ -54,7 +54,7 @@ export default function PhotoPage() {
           sceneType: v.sceneType,
         }),
       });
-      message.success(`计划已生成（${plan.source === 'llm' ? '小镜分镜' : '模板分镜'}）`);
+      message.success(`计划已生成（${plan.source === 'llm' ? '小PD分镜' : '模板分镜'}）`);
       setCreateOpen(false);
       form.resetFields();
       setSelected(plan.id);
@@ -89,7 +89,7 @@ export default function PhotoPage() {
               <span style={{ color: '#6F6678', lineHeight: 1.8 }}>
                 还没有企划
                 <br />
-                新建一个，小镜来排分镜和黄金时刻
+                新建一个，小PD来排分镜和黄金时刻
               </span>
             }
             image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -112,7 +112,7 @@ export default function PhotoPage() {
                             {p.status === 'reviewed' ? '已复盘' : p.status === 'shot' ? '已拍' : '待拍'}
                           </span>
                           <span className="pchip">{p.shots.length} 镜</span>
-                          {p.source === 'llm' && <span className="pchip pchip-rose">小镜分镜</span>}
+                          {p.source === 'llm' && <span className="pchip pchip-rose">小PD分镜</span>}
                         </Space>
                       </div>
                     }
@@ -229,7 +229,7 @@ function PlanDetail({ plan, onBack }: { plan: PhotoPlan; onBack: () => void }) {
         </h1>
         <p className="hero-meta">
           {plan.date} · {plan.location.name} · {plan.location.sceneType}
-          {plan.source === 'llm' ? ' · 小镜分镜' : ' · 模板分镜'}
+          {plan.source === 'llm' ? ' · 小PD分镜' : ' · 模板分镜'}
         </p>
         <div className="hourchips">
           {plan.timeWindows.map((w) => (

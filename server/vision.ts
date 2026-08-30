@@ -1,5 +1,5 @@
 /**
- * 视觉管线 —— qwen-vl-max 三条独立管线，全部：
+ * 视觉管线 —— GLM-5.3-Flash 多模态三条独立管线，全部：
  *   压缩 JPEG base64 → 结构化 prompt → zod 校验 → 失败重试 1 次。
  *
  * 隐私约定：原图只落本地工作区，发给云端的是 ≤1280px 的压缩 JPEG。
@@ -58,7 +58,7 @@ export type ReviewDraft = z.infer<typeof reviewSchema>;
 // ---------- 底层调用 ----------
 
 async function visionJSON<T>(schema: z.ZodType<T>, prompt: string, images: string[]): Promise<T> {
-  if (!visionClient) throw new Error('DASHSCOPE_API_KEY 未配置');
+  if (!visionClient) throw new Error('GLM_API_KEY 未配置');
   const content: unknown[] = [{ type: 'text', text: prompt }];
   for (const url of images) content.push({ type: 'image_url', image_url: { url } });
 

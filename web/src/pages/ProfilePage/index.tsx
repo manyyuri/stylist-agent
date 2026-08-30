@@ -5,7 +5,7 @@ import {
   Space, Tag, Alert, Spin, Empty, Flex, Rate,
 } from 'antd';
 import { CameraOutlined, ArrowUpOutlined } from '@ant-design/icons';
-import type { AnchorCard, Profile } from '../../types';
+import type { AnchorCard, MonthlyReport, Profile } from '../../types';
 import { request, upload } from '../../api';
 import { img, useUiStore } from '../../stores';
 
@@ -23,6 +23,7 @@ export default function ProfilePage() {
   const [selfieOpen, setSelfieOpen] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [faceDraft, setFaceDraft] = useState<Record<string, string> | null>(null);
+  const [monthly, setMonthly] = useState<MonthlyReport | null>(null);
   const version = useUiStore((s) => s.version);
   const bump = useUiStore((s) => s.bump);
   const [form] = Form.useForm();
@@ -30,6 +31,7 @@ export default function ProfilePage() {
   useEffect(() => {
     request<Profile>('/api/profile').then(setProfile).catch(() => {});
     request<AnchorCard[]>('/api/anchors').then(setAnchors).catch(() => {});
+    request<MonthlyReport>('/api/review/monthly').then(setMonthly).catch(() => {});
   }, [version]);
 
   const toggleAnchor = async (id: string) => {
@@ -65,7 +67,7 @@ export default function ProfilePage() {
     try {
       const r = await upload<{ draft: Record<string, string>; photo: string }>('/api/profile/face', [f]);
       setFaceDraft(r.draft);
-      message.info('这是小镜的建议，确认无误后点「采纳」写入档案');
+      message.info('这是小PD的建议，确认无误后点「采纳」写入档案');
     } catch (e) {
       message.error((e as Error).message);
       setSelfieOpen(false);
@@ -102,11 +104,82 @@ export default function ProfilePage() {
     } catch (e) { message.error((e as Error).message); }
   };
 
+  /** 采纳锚点漂移建议：把「数据更好的锚点」提为新的主攻（写入档案后 version 自增重取） */
+  const adoptDrift = async () => {
+    if (!profile || !monthly?.drift) return;
+    const { to } = monthly.drift;
+    const arr = profile.anchors.filter((a) => a !== to);
+    arr.unshift(to);
+    try {
+      await request('/api/profile', { method: 'PUT', body: JSON.stringify({ ...profile, anchors: arr }) });
+      setProfile({ ...profile, anchors: arr });
+      bump();
+      message.success(`主攻风格已换成「${monthly.drift.toName}」✨`);
+    } catch (e) {
+      message.error((e as Error).message);
+    }
+  };
+
   if (!profile) return <div style={{ padding: 40, textAlign: 'center' }}><Spin /></div>;
   const b = profile.basics;
 
   return (
     <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* 小PD · 月度复盘：自我认知层学习 —— 锚点漂移建议，确认才写入 */}
+      <Card
+        size="small"
+        title={
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="eyebrow eyebrow-rose">MONTHLY REVIEW</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>小PD · 月度复盘</span>
+          </span>
+        }
+        extra={
+          monthly ? (
+            <span className="pchip">{monthly.source === 'llm' ? '导演复盘' : '规则复盘'}</span>
+          ) : undefined
+        }
+      >
+        {!monthly ? (
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <Spin size="small" />
+            <p style={{ marginTop: 8, color: '#999', fontSize: 12 }}>小PD 正在翻这个月的通告单…</p>
+          </div>
+        ) : monthly.days === 0 ? (
+          <div style={{ fontSize: 13, color: '#6F6678', lineHeight: 1.8 }}>
+            这个月还没有通告记录。每天来「通告」页盖个「出演确定」，月底小PD 就能给你写导演复盘。
+          </div>
+        ) : (
+          <>
+            <p className="narrative" style={{ marginBottom: 10 }}>{monthly.narrative}</p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+              <span className="pchip">通告 {monthly.days} 天</span>
+              <span className="pchip pchip-rose">就穿这套 {monthly.feedback.liked}</span>
+              <span className="pchip">还行 {monthly.feedback.meh}</span>
+              <span className="pchip pchip-gold">SCORE {monthly.avgScore}</span>
+            </div>
+            {monthly.topItems.length > 0 && (
+              <div style={{ fontSize: 12, color: '#6F6678', marginBottom: 8 }}>
+                本月最出片：{monthly.topItems.map((t) => `${t.subType}（${t.colorName}）`).join(' · ')}
+              </div>
+            )}
+            {monthly.drift && (
+              <Alert
+                type="warning"
+                showIcon
+                message={`主攻风格建议换成「${monthly.drift.toName}」`}
+                description={monthly.drift.reason}
+                action={
+                  <Button size="small" type="primary" icon={<ArrowUpOutlined />} onClick={adoptDrift}>
+                    采纳建议
+                  </Button>
+                }
+              />
+            )}
+          </>
+        )}
+      </Card>
+
       <Card
         size="small"
         title="形象档案"

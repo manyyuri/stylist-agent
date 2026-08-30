@@ -243,7 +243,7 @@ export default function TodayPage() {
                 <span style={{ color: '#6F6678', lineHeight: 1.8 }}>
                   今日通告待排
                   <br />
-                  先去「服装间」定妆两件今天穿的单品，小镜就能开始搭配
+                  先去「服装间」定妆两件今天穿的单品，小PD就能开始搭配
                 </span>
               }
             />

@@ -210,6 +210,25 @@ export function anchorMatch(items: WardrobeItem[], anchorId: string): number {
   return clamp(Math.round((raw / (items.length * perItemMax)) * 100), 0, 100);
 }
 
+/**
+ * 锚点唯一真相：整个系统只认「排序前二」的锚点（主 75% + 次 25%）。
+ * 档案页的排序 = 优先级，第二锚点必须有回响——否则多选就是假承诺。
+ * 所有消费方（候选生成 / 妆造 / 拍照企划 / 缺口检查）统一从这里取锚点。
+ */
+export function effectiveAnchors(profile: Profile): string[] {
+  return profile.anchors.slice(0, 2);
+}
+
+export function anchorScore(items: WardrobeItem[], anchors: string[]): number {
+  const primary = anchors[0] ?? 'newjeans';
+  let s = anchorMatch(items, primary);
+  const secondary = anchors[1];
+  if (secondary && secondary !== primary) {
+    s = s * 0.75 + anchorMatch(items, secondary) * 0.25;
+  }
+  return Math.round(s);
+}
+
 // ---------------------------------------------------------------------------
 // §5.5 穿着冷却 / §5 photoRating
 // ---------------------------------------------------------------------------
@@ -340,10 +359,10 @@ export function generateCandidates(ctx: CandidateCtx): OotdCandidate[] {
     combos = sampled;
   }
 
-  const primaryAnchor = profile.anchors[0] ?? 'newjeans';
+  const anchors = effectiveAnchors(profile);
   const scored: OotdCandidate[] = combos.map((combo) => {
     const color = colorHarmony(combo, profile).score;
-    const anchor = anchorMatch(combo, primaryAnchor);
+    const anchor = anchorScore(combo, anchors);
     const wear = wearPenalty(combo, date);
     const photo = photoBonus(combo);
     return {
@@ -395,10 +414,11 @@ export function recommendMakeup(opts: {
   profile: Profile;
   occasion: Occasion;
   anchor?: string;
+  anchors?: string[];
   timeBudget?: number;
 }): MakeupPick[] {
   const { profile, occasion } = opts;
-  const anchor = opts.anchor ?? profile.anchors[0] ?? '';
+  const anchors = opts.anchors ?? (opts.anchor ? [opts.anchor] : effectiveAnchors(profile));
   const budget = opts.timeBudget ?? (occasion === '通勤' ? 10 : occasion === '拍照' ? 45 : 20);
   const picks: MakeupPick[] = [];
   for (const t of makeups()) {
@@ -409,7 +429,13 @@ export function recommendMakeup(opts: {
 
     let score = 0;
     const why: string[] = [];
-    if (t.anchors.includes(anchor)) { score += 30; why.push(`匹配锚点 ${anchor}`); }
+    // 主锚点 +30，次锚点 +15 —— 与 anchorScore 同一套优先级，二锚点有回响
+    for (let i = 0; i < anchors.length; i++) {
+      if (t.anchors.includes(anchors[i]!)) {
+        score += i === 0 ? 30 : 15;
+        why.push(`匹配锚点 ${anchors[i]}`);
+      }
+    }
     // 眼型：限定未命中软降权（如肿眼泡遇到重珠光系）
     if (t.faceFit.eyeShape.length > 0 && profile.basics.eyeShape && !t.faceFit.eyeShape.includes(profile.basics.eyeShape)) score -= 15;
     else if (t.faceFit.eyeShape.length === 0) score += 5;

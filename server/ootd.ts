@@ -2,7 +2,7 @@
  * OOTD 编排服务 —— 「规则引擎圈候选 + LLM 选品叙事」的混合架构落地。
  *
  * 数据流（spec §2.2）：
- *   规则引擎 Top5 候选（纯数学） → qwen-max 从真实候选中选 1 + 女团感叙事
+ *   规则引擎 Top5 候选（纯数学） → GLM-5.3-Flash 从真实候选中选 1 + 女团感叙事
  *   → validateOutfit 结构校验（LLM 幻觉的最后防线）→ 落盘 ootd/YYYY/MM-DD.json
  * LLM 失败 → 规则 Top1 + 模板文案，source:'rule'，功能不中断。
  */
@@ -98,7 +98,7 @@ export async function composeOotd({ date, occasion, regenerate }: ComposeOpts): 
 
   const anchor = profile.anchors[0] ?? 'newjeans';
   const anchorCard = anchorById(anchor);
-  const makeupPicks = recommendMakeup({ profile, occasion, anchor });
+  const makeupPicks = recommendMakeup({ profile, occasion, anchors: profile.anchors });
 
   let ootd: Ootd | undefined;
   let llmPicked: OotdCandidate | null = null;

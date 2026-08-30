@@ -69,7 +69,14 @@ plansRouter.post('/:id/shots', upload.array('photos', 20), async (req, res) => {
     saved.push(img.rel);
   }
   if (plan.status === 'planned') await updatePlan(plan.id, (p) => { p.status = 'shot'; });
-  res.json({ ok: true, count: saved.length });
+  // 交给 Flue durable PhotoReview Agent；Flue 不可用时仍保留手动 /:id/review。
+  const flueUrl = process.env.FLUE_URL ?? 'http://127.0.0.1:4291';
+  void fetch(`${flueUrl}/internal/photo-review`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ planId: plan.id }),
+  }).catch(() => undefined);
+  res.json({ ok: true, count: saved.length, reviewDispatched: true });
 });
 
 /** 触发复盘（视觉管线）；断网时 body.keep 提供手动精选文件名 */

@@ -1,0 +1,24 @@
+# stylist-agent 排期与发版配置
+# 每周日发版（固定节奏），周六排期，每周一次，功能批次默认 minor 升级
+
+planning_day: Saturday          # 排期日（发版前一天）
+release_day: Sunday             # 发版日：每周日
+release_frequency: weekly       # weekly / biweekly / monthly
+release_time: "18:00"           # 发版时间（提醒用）
+
+# 版本管理
+default_version_bump: minor     # 本项目的每周节奏以功能批次为主 → minor
+auto_detect_breaking: true      # git log 出现 BREAKING CHANGE / feat! 自动升级
+
+# 文件路径
+backlog_file: backlog.md
+sprint_folder: sprints/
+archive_folder: sprints/archived/
+
+# 容量管理
+default_weekly_capacity: 8      # 每周计划点数（规划用；已完成任务不受此限）
+story_point_calibration:
+  small: 1                      # 1小时内
+  medium: 3                     # 半天内
+  large: 5                      # 1-2天
+  xlarge: 8                     # 2天以上 / 架构级

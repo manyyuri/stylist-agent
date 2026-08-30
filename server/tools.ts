@@ -1,8 +1,8 @@
 /**
- * Agent 工具注册表 —— qwen-max function calling 的「手和脚」。
+ * 业务工具注册表 —— Flue Agent 的「手和脚」。
  *
- * 每个工具：JSON Schema 参数 + handler。Agent 循环（agent.ts）把注册表
- * 编译成 OpenAI tools 格式交给模型，模型决定何时调用，服务端执行后回灌结果。
+ * 每个工具保留 Zod 参数校验和真实业务 handler。Flue adapter 将模型参数
+ * 交给这里做第二层校验，确保模型不能绕过规则引擎编造衣橱数据。
  * 关键原则：所有涉及「真实数据」的操作（衣橱/档案/穿搭）都只能通过工具完成，
  * 模型拿到的永远是工具返回的事实，从机制上杜绝编造单品 ID。
  *
@@ -11,9 +11,8 @@
  */
 import type { ChatEvent, Occasion, PhotoPlan } from '../shared/types.ts';
 import { z } from 'zod';
-import type OpenAI from 'openai';
 import { getProfile, wardrobeItems, composeOotd, logFeedback, readOotd } from './ootd.ts';
-import { recommendMakeup } from './rules.ts';
+import { recommendMakeup, effectiveAnchors } from './rules.ts';
 import { getWeather, today } from './weather.ts';
 import { anchorById } from './knowledge.ts';
 import { createPlan } from './plans.service.ts';
@@ -183,7 +182,7 @@ export const TOOLS: ToolDef[] = [
       const profile = getProfile();
       const items = wardrobeItems();
       const gaps: { anchor: string; missing: string[]; paletteHit: string }[] = [];
-      for (const anchorId of profile.anchors.slice(0, 2)) {
+      for (const anchorId of effectiveAnchors(profile)) {
         const card = anchorById(anchorId);
         if (!card) continue;
         const missing: string[] = [];
@@ -204,18 +203,6 @@ function rgbClose(a: string, b: string): boolean {
   const dg = ((pa >> 8) & 255) - ((pb >> 8) & 255);
   const db = (pa & 255) - (pb & 255);
   return Math.sqrt(dr * dr + dg * dg + db * db) < 60;
-}
-
-/** 编译成 OpenAI tools 参数格式（zod v4 原生 toJSONSchema） */
-export function toOpenAITools(): OpenAI.Chat.Completions.ChatCompletionTool[] {
-  return TOOLS.map((t) => ({
-    type: 'function' as const,
-    function: {
-      name: t.name,
-      description: t.description,
-      parameters: z.toJSONSchema(t.schema, { target: 'draft-7' }),
-    },
-  }));
 }
 
 export function findTool(name: string): ToolDef | undefined {

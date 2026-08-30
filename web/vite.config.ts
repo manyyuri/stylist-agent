@@ -9,6 +9,10 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:4290',
       '/workspace': 'http://localhost:4290',
+      '/agents': {
+        target: 'http://localhost:4291',
+        rewrite: (path) => path.replace(/^\/agents/, ''),
+      },
     },
     // 允许 import 项目根的 shared/types.ts
     fs: { allow: [resolve(__dirname, '..')] },

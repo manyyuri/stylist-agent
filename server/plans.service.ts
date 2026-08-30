@@ -149,7 +149,7 @@ export async function createPlan(opts: CreatePlanOpts): Promise<PhotoPlan> {
 
   // 妆造：拍照场景 → 高持妆优先
   const profile = getProfile();
-  const makeupPick = recommendMakeup({ profile, occasion: '拍照', anchor: profile.anchors[0] })[0];
+  const makeupPick = recommendMakeup({ profile, occasion: '拍照', anchors: profile.anchors })[0];
   const makeupId = makeupPick?.template.id ?? 'mk_stage_photo';
 
   // 分镜：LLM 生成 + 校验，失败用 shots.md 模板
