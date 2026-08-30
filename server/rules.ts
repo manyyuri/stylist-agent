@@ -329,7 +329,9 @@ export function generateCandidates(ctx: CandidateCtx): OotdCandidate[] {
   for (const o of outs) for (const s of shoes) optionals.push([o, s]); // 外套+鞋
 
   let combos: WardrobeItem[][];
-  if (spec.outerwearRequired || weather.rainProb >= 50) {
+  // 雨天需要外套，但盛夏（≥28℃）不强制——夏天雨天的答案是伞+防水鞋，不是夹克
+  const rainNeedsOuter = weather.rainProb >= 50 && temp < 28;
+  if (spec.outerwearRequired || rainNeedsOuter) {
     combos = [];
     for (const core of cores) {
       for (const opt of optionals) {

@@ -172,6 +172,12 @@ test('候选生成：雨天鞋类只留防水材质', () => {
   }
 });
 
+test('候选生成：盛夏+雨天也能出组合（不强制外套）', () => {
+  // 回归：31°C 降水 100% 时，外套全被温度/季节过滤 → 若强制外套则零组合崩溃
+  const rainyHot = generateCandidates({ ...ctx, weather: { temp: 31, tempRange: [27, 32], rainProb: 100 } });
+  assert.ok(rainyHot.length >= 1, '盛夏雨天不应凑不出组合');
+});
+
 // ---------- §5.7 结构校验（P0 验收②：LLM 编造 id 被拦截） ----------
 
 test('校验：虚构 item id 被拦截', () => {
