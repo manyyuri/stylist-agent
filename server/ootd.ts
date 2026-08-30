@@ -176,9 +176,14 @@ export async function composeOotd({ date, occasion, regenerate }: ComposeOpts): 
     };
   }
 
-  // 落盘（regenerate 覆盖当日 current，history 保留全部生成过的组合）
+  // 落盘（regenerate 覆盖当日 current，history 合并：保留全部生成过的组合，下次排除不重复）
   await updateJson<Ootd | null>(ootdPath(date), null, (v) => {
-    ootd.history = v?.history?.length ? v.history : ootd.history;
+    const prev = v?.history ?? [];
+    const mine = ootd.history ?? [];
+    ootd.history = [
+      ...prev,
+      ...mine.filter((h) => !prev.some((p) => p.items.join('|') === h.items.join('|'))),
+    ];
     return ootd;
   });
   return ootd;

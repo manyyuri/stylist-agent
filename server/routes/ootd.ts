@@ -6,13 +6,13 @@ import { today } from '../weather.ts';
 
 export const ootdRouter = Router();
 
-/** 当日无 OOTD 则幂等生成；有则直接返回 */
+/** 同日同场合幂等返回；切换场合 → 为当前场合重新配一套（基于 history 排除已生成组合） */
 ootdRouter.get('/today', async (req, res) => {
   try {
     const date = (req.query.date as string) || today();
     const occasion = ((req.query.occasion as Occasion) || '通勤') as Occasion;
     const existing = readOotd(date);
-    if (existing) {
+    if (existing && existing.occasion === occasion) {
       res.json(existing);
       return;
     }
