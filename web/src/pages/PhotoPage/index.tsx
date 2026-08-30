@@ -2,16 +2,25 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Button, Card, List, Tag, Form, Input, Select, DatePicker, App, Empty, Space,
-  Timeline, Checkbox, Upload, Carousel, Image, Alert, Spin, Flex, Typography,
+  Timeline, Checkbox, Upload, Carousel, Image, Alert, Spin, Flex, Typography, Segmented,
 } from 'antd';
-import { PlusOutlined, CameraOutlined, ReloadOutlined, LeftOutlined } from '@ant-design/icons';
+import { PlusOutlined, CameraOutlined, ReloadOutlined, LeftOutlined, LinkOutlined, PictureOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import type { PhotoPlan, PhotoReview } from '../../types';
-import { request, upload } from '../../api';
+import { request, upload, fileToDataUrl } from '../../api';
 import { img, useUiStore } from '../../stores';
 import Sheet from '../../components/Sheet';
 
 const SCENES: PhotoPlan['location']['sceneType'][] = ['街拍', '咖啡店', '公园', '天台', '夜景'];
+const REF_VERDICT: Record<string, string> = {
+  'link-cover': '已抓取链接并分析封面图，分镜已生成',
+  'link-text': '链接没抓到封面，用标题/正文生成了分镜',
+  'link-failed': '链接没抓到内容（小红书要登录），已按默认生成——建议改粘贴「分享文字」或上传参考图',
+  image: '已分析参考图，分镜已生成',
+  text: '已按分享文字生成了分镜',
+  manual: '分镜已生成',
+};
+type CreateMode = 'manual' | 'link' | 'image';
 const VERDICT: Record<string, { color: string; label: string }> = {
   keep: { color: 'green', label: '精选' },
   ok: { color: 'blue', label: '可用' },
@@ -25,6 +34,8 @@ export default function PhotoPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [mode, setMode] = useState<CreateMode>('manual');
+  const [refImg, setRefImg] = useState<string | null>(null);
   const [form] = Form.useForm();
   const version = useUiStore((s) => s.version);
   const bump = useUiStore((s) => s.bump);
@@ -42,22 +53,49 @@ export default function PhotoPage() {
 
   useEffect(() => { load(); }, [load, version]);
 
-  const create = async (v: { theme: string; date: Dayjs; location: string; sceneType: PhotoPlan['location']['sceneType'] }) => {
+  const create = async (v: {
+    theme?: string; date: Dayjs; location?: string;
+    sceneType?: PhotoPlan['location']['sceneType']; input?: string;
+  }) => {
     setCreating(true);
     try {
-      const plan = await request<PhotoPlan>('/api/plans', {
+      const date = v.date.format('YYYY-MM-DD');
+      if (mode === 'manual') {
+        if (!v.theme || !v.location || !v.sceneType) {
+          message.error('请填写主题、地点、场景');
+          return;
+        }
+        const plan = await request<PhotoPlan>('/api/plans', {
+          method: 'POST',
+          body: JSON.stringify({ theme: v.theme, date, location: v.location, sceneType: v.sceneType }),
+        });
+        message.success(`计划已生成（${plan.source === 'llm' ? '小PD分镜' : '模板分镜'}）`);
+        setCreateOpen(false);
+        form.resetFields();
+        setRefImg(null);
+        setSelected(plan.id);
+        bump();
+        return;
+      }
+      if (mode === 'link' && !v.input?.trim() || mode === 'image' && !refImg) {
+        message.error(mode === 'link' ? '请粘贴小红书链接或分享文字' : '请上传一张参考图（小红书截图）');
+        return;
+      }
+      const r = await request<{ plan: PhotoPlan; used: keyof typeof REF_VERDICT }>('/api/plans/from-link', {
         method: 'POST',
         body: JSON.stringify({
-          theme: v.theme,
-          date: v.date.format('YYYY-MM-DD'),
-          location: v.location,
-          sceneType: v.sceneType,
+          input: mode === 'link' ? v.input : undefined,
+          imageDataUrl: mode === 'image' ? refImg : undefined,
+          date,
+          location: v.location || undefined,
+          sceneType: v.sceneType || undefined,
         }),
       });
-      message.success(`计划已生成（${plan.source === 'llm' ? '小PD分镜' : '模板分镜'}）`);
+      message.success(REF_VERDICT[r.used] ?? '分镜已生成');
       setCreateOpen(false);
       form.resetFields();
-      setSelected(plan.id);
+      setRefImg(null);
+      setSelected(r.plan.id);
       bump();
     } catch (e) {
       message.error((e as Error).message);
@@ -112,6 +150,7 @@ export default function PhotoPage() {
                             {p.status === 'reviewed' ? '已复盘' : p.status === 'shot' ? '已拍' : '待拍'}
                           </span>
                           <span className="pchip">{p.shots.length} 镜</span>
+                          {p.reference && <span className="pchip">📎 参考</span>}
                           {p.source === 'llm' && <span className="pchip pchip-rose">小PD分镜</span>}
                         </Space>
                       </div>
@@ -129,21 +168,66 @@ export default function PhotoPage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
       >
-        <Form form={form} layout="vertical" onFinish={create} initialValues={{ sceneType: '街拍', date: dayjs().add(1, 'day') }}>
-          <Form.Item name="theme" label="主题" rules={[{ required: true, message: '比如：周六下午安福路街拍' }]}>
-            <Input placeholder="周六下午安福路街拍" />
-          </Form.Item>
+        <Segmented
+          block
+          value={mode}
+          onChange={(v) => { setMode(v as CreateMode); form.resetFields(); setRefImg(null); }}
+          options={[
+            { label: '手填', value: 'manual' },
+            { label: '小红书链接', value: 'link', icon: <LinkOutlined /> },
+            { label: '参考图', value: 'image', icon: <PictureOutlined /> },
+          ]}
+          style={{ marginBottom: 14 }}
+        />
+        <Form form={form} layout="vertical" onFinish={create} initialValues={{ date: dayjs().add(1, 'day') }}>
+          {mode === 'manual' && (
+            <Form.Item name="theme" label="主题" rules={[{ required: true, message: '比如：周六下午安福路街拍' }]}>
+              <Input placeholder="周六下午安福路街拍" />
+            </Form.Item>
+          )}
+          {mode === 'link' && (
+            <Form.Item
+              name="input"
+              label="小红书链接 / 分享文字"
+              rules={[{ required: true, message: '粘贴 app 里复制的小红书链接或分享文字' }]}
+              extra="复制链接 → 自动抓封面分析风格；抓不到就粘贴「分享文字」（标题+正文）"
+            >
+              <Input.TextArea
+                rows={3}
+                placeholder="http://xhslink.com/a/XXXX 或粘贴分享文字"
+                style={{ fontSize: 13 }}
+              />
+            </Form.Item>
+          )}
+          {mode === 'image' && (
+            <Form.Item label="参考图（小红书截图）" required style={{ marginBottom: 8 }}>
+              <Upload
+                accept="image/*"
+                showUploadList={false}
+                maxCount={1}
+                customRequest={async ({ file }) => {
+                  const dataUrl = await fileToDataUrl(file as unknown as File);
+                  setRefImg(dataUrl);
+                }}
+              >
+                <Button block icon={<PictureOutlined />}>选择参考图</Button>
+              </Upload>
+              {refImg && (
+                <Image src={refImg} width="100%" style={{ borderRadius: 10, marginTop: 8, maxHeight: 220, objectFit: 'cover' }} />
+              )}
+            </Form.Item>
+          )}
           <Form.Item name="date" label="日期" rules={[{ required: true }]}>
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="sceneType" label="场景">
-            <Select options={SCENES.map((s) => ({ value: s }))} />
+          <Form.Item name="sceneType" label="场景" rules={mode === 'manual' ? [{ required: true, message: '请选择场景' }] : undefined} extra={mode !== 'manual' ? '留空则按参考自动识别' : undefined}>
+            <Select options={SCENES.map((s) => ({ value: s }))} allowClear={mode !== 'manual'} />
           </Form.Item>
-          <Form.Item name="location" label="地点" rules={[{ required: true }]}>
-            <Input placeholder="安福路 / 永康路 / 徐汇滨江" />
+          <Form.Item name="location" label="地点" rules={mode === 'manual' ? [{ required: true }] : undefined}>
+            <Input placeholder={mode === 'manual' ? '安福路 / 永康路 / 徐汇滨江' : '留空则按参考推荐地点'} />
           </Form.Item>
           <Button type="primary" htmlType="submit" block shape="round" loading={creating} className="touchable">
-            生成分镜计划（约 10 秒）
+            {mode === 'manual' ? '生成分镜计划（约 10 秒）' : '从参考生成拍摄计划（约 15 秒）'}
           </Button>
         </Form>
       </Sheet>
@@ -246,6 +330,33 @@ function PlanDetail({ plan, onBack }: { plan: PhotoPlan; onBack: () => void }) {
           </p>
         )}
       </div>
+      {plan.reference && (
+        <Card size="small" style={{ marginBottom: 12 }} styles={{ body: { padding: 10 } }}>
+          <Flex gap={12} align="center">
+            {(plan.reference.covers ?? (plan.reference.cover ? [plan.reference.cover] : [])).length > 0 && (
+              <div className="hscroll" style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                {(plan.reference.covers ?? (plan.reference.cover ? [plan.reference.cover] : [])).map((c, i) => (
+                  <Image
+                    key={c}
+                    src={img(c)}
+                    width={52}
+                    height={68}
+                    style={{ objectFit: 'cover', borderRadius: 8 }}
+                    preview={false}
+                  />
+                ))}
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="eyebrow" style={{ marginBottom: 2 }}>REFERENCE · {plan.reference.source === 'image' ? '参考图' : plan.reference.source === 'link' ? '小红书链接' : '分享文字'}{plan.reference.covers && plan.reference.covers.length > 1 ? ` · ${plan.reference.covers.length} 图` : ''}</div>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{plan.reference.title ?? '小红书灵感'}</div>
+              {plan.reference.brief && (
+                <div style={{ fontSize: 12, color: '#6F6678', marginTop: 2, lineHeight: 1.5 }}>{plan.reference.brief}</div>
+              )}
+            </div>
+          </Flex>
+        </Card>
+      )}
       <Card size="small" title={`分镜（${plan.shots.length}）— pose 全部引用姿势库`} style={{ marginBottom: 12 }}>
         <Timeline
           items={plan.shots.map((s) => ({

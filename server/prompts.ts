@@ -78,8 +78,11 @@ export const REVIEW_PHOTOS_PROMPT = `你是一位人像摄影指导。逐张评�
 评价标准：构图（主体位置/水平线/留白）、光线（方向/质感/曝光）、表情（自然度/眼神）、
 姿势（松弛度/显高显瘦）。keep=可直接进精选，ok=可用，drop=废片。`;
 
-/** 拍照计划分镜创意（结构服务端校验，pose 必须引用姿势库编号） */export const PLAN_SHOTS_PROMPT = (sceneType: string, theme: string, anchorName: string) => `你是拍照策划师。为用户生成「${theme}」的 ${sceneType} 拍照计划分镜。
-风格锚点：${anchorName}。
+/** 拍照计划分镜创意（结构服务端校验，pose 必须引用姿势库编号） */export const PLAN_SHOTS_PROMPT = (sceneType: string, theme: string, anchorName: string, styleBrief?: string) => `你是拍照策划师。为用户生成「${theme}」的 ${sceneType} 拍照计划分镜。
+风格锚点：${anchorName}。${styleBrief ? `
+
+灵感参考（来自小红书笔记，必须贯彻到分镜里：配色、穿搭结构、场景氛围、表情基调）：
+${styleBrief}` : ''}
 
 规则：
 1. 生成 6-8 个分镜，每个分镜的 pose 字段【必须】从下面姿势库编号中选择（p_01 ~ p_24），
@@ -89,6 +92,22 @@ export const REVIEW_PHOTOS_PROMPT = `你是一位人像摄影指导。逐张评�
 4. 输出 JSON：{"shots":[{"no":1,"place":"具体地点描述","angle":"机位","framing":"景别构图",
    "pose":"p_xx 动作名","expression":"表情","burstTip":"连拍提示"}],
    "props":["道具清单（三脚架/蓝牙遥控必含）"],"checklist":["出发前检查清单 5-8 条"]}`;
+
+/** 小红书参考 → 风格简报：视觉模型（封面图）或文本模型（分享文字）共用 schema */
+/** 参考分析：从封面图/分享文字提取风格简报，供 createPlan 分镜使用 */
+export const REFERENCE_BRIEF_PROMPT = (anchorName: string) => `你是拍照策划师。用户在小红书看到一条喜欢的穿搭/拍照灵感，想复刻成自己的拍摄计划。
+请分析这张参考图（及/或笔记文字），提炼成可执行的风格简报。
+用户的主风格锚点：${anchorName}。
+
+要求：
+- styleBrief 控制在 120 字内，具体到：主色调（hex）、穿搭结构（上装+下装+鞋/配饰）、
+  场景氛围、表情基调、最能代表这套 look 的一个记忆点；
+- sceneType 只允许：街拍/咖啡店/公园/天台/夜景 之一；
+- locationHint 给适合的地点点位类型（如 老洋房街道/城市天台/江边步道），给中文；
+- theme 一句话点出要复刻什么（如 复刻这套燕麦色针织+直筒牛仔裤的初秋街拍）。
+
+输出 JSON：{"theme":string,"sceneType":"街拍|咖啡店|公园|天台|夜景",
+"styleBrief":string,"locationHint":string}`;
 
 /** 月度复盘（小PD 导演复盘叙事） */
 export const MONTHLY_REVIEW_PROMPT = `你是「小PD」，这家「一个人的企划社」的节目导演兼造型师。

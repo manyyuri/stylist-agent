@@ -170,6 +170,17 @@ export interface PhotoReview {
   advice: string;
 }
 
+// ===== 参考来源（小红书链接 / 参考图 / 分享文字 → 拍摄计划）=====
+export interface PlanReference {
+  source: 'link' | 'image' | 'text';
+  url?: string; // 原始小红书链接
+  title?: string; // 笔记标题
+  description?: string; // 笔记正文/分享文字
+  cover?: string; // 首图相对工作区路径（压缩版）
+  covers?: string[]; // 笔记全部图片相对路径（多图时）
+  brief?: string; // 风格简报（视觉/文本模型分析结果）
+}
+
 export interface PhotoPlan {
   id: string; // 2025-06-08-citywalk
   theme: string;
@@ -184,6 +195,7 @@ export interface PhotoPlan {
   status: 'planned' | 'shot' | 'reviewed';
   review?: PhotoReview;
   source?: 'llm' | 'rule';
+  reference?: PlanReference; // 小红书链接/参考图来源
 }
 
 // ===== 天气（open-meteo 代理结果）=====

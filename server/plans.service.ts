@@ -9,7 +9,7 @@
  */
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import type { PhotoPlan, Shot } from '../shared/types.ts';
+import type { PhotoPlan, Shot, PlanReference } from '../shared/types.ts';
 import { config } from './config.ts';
 import { absPath, ensureDir, updateJson, readJson } from './store.ts';
 import { sunWindows } from './sun.ts';
@@ -19,6 +19,8 @@ import { getProfile } from './ootd.ts';
 import { recommendMakeup } from './rules.ts';
 import { chatJSON, llmAvailable } from './llm.ts';
 import { PLAN_SHOTS_PROMPT } from './prompts.ts';
+import { analyzeReferenceImage, analyzeReferenceText } from './vision.ts';
+import { isUrl, parsePage, parseShareText, fetchCoverBuffers, saveCovers } from './reference.ts';
 import { z } from 'zod';
 import { anchorById } from './knowledge.ts';
 
@@ -129,6 +131,10 @@ export interface CreatePlanOpts {
   sceneType: SceneType;
   outfitItemIds?: string[];
   ootdDate?: string;
+  /** 小红书/参考来源（附到计划上，详情页展示封面与标题） */
+  reference?: PlanReference;
+  /** 风格简报（视觉/文本模型分析结果），注入分镜创意 */
+  styleBrief?: string;
 }
 
 export async function createPlan(opts: CreatePlanOpts): Promise<PhotoPlan> {
@@ -165,7 +171,7 @@ export async function createPlan(opts: CreatePlanOpts): Promise<PhotoPlan> {
         schema: shotsSchema,
         maxTokens: 3072,
         messages: [
-          { role: 'system', content: PLAN_SHOTS_PROMPT(sceneType, theme, anchorCard?.name ?? 'NewJeans 清冷学院') },
+          { role: 'system', content: PLAN_SHOTS_PROMPT(sceneType, theme, anchorCard?.name ?? 'NewJeans 清冷学院', opts.styleBrief) },
           { role: 'user', content: `主题：${theme}\n日期：${date}\n地点：${locationName}\n\n姿势库（pose 字段唯一取值来源）：\n${poseCatalog()}` },
         ],
       });
@@ -204,8 +210,133 @@ export async function createPlan(opts: CreatePlanOpts): Promise<PhotoPlan> {
     checklist,
     status: 'planned',
     source,
+    reference: opts.reference,
   };
   ensureDir(`plans/${id}/shots`);
   await updateJson(`plans/${id}/plan.json`, null, () => plan);
   return plan;
+}
+
+// ---------- 从参考来源创建计划（小红书链接 / 参考图 / 分享文字） ----------
+
+export interface CreateFromReferenceOpts {
+  /** 小红书链接或分享文字（二选一，与 imageDataUrls 可叠加） */
+  input?: string;
+  /** 用户上传的参考图（小红书截图），data URL（单张兼容） */
+  imageDataUrl?: string;
+  /** 用户上传的多张参考图，data URL */
+  imageDataUrls?: string[];
+  date: string;
+  location?: string;
+  sceneType?: SceneType;
+  outfitItemIds?: string[];
+}
+
+export type CreateFromReferenceResult = {
+  plan: PhotoPlan;
+  /** 实际走了哪条来源路径（前端可提示） */
+  used: 'link-cover' | 'link-text' | 'link-failed' | 'image' | 'text' | 'manual';
+};
+
+/**
+ * 来源优先级：封面图视觉分析（链接/直传）> 分享文字文本分析 > 手动兜底。
+ * 任何一步失败都降级，绝不让用户卡在「抓不到小红书」上。
+ */
+export async function createPlanFromReference(opts: CreateFromReferenceOpts): Promise<CreateFromReferenceResult> {
+  const profile = getProfile();
+  const anchorCard = anchorById(profile.anchors[0] ?? 'newjeans');
+  const anchorName = anchorCard?.name ?? 'NewJeans 清冷学院';
+  const input = opts.input?.trim() ?? '';
+
+  // 1. 收集参考素材
+  let url: string | undefined;
+  let title: string | undefined;
+  let description: string | undefined;
+  let coverBuffers: Buffer[] = [];
+  let used: CreateFromReferenceResult['used'] = 'manual';
+
+  if (isUrl(input)) {
+    url = input;
+    let fetched = false;
+    try {
+      const note = await parsePage(input);
+      title = note.title;
+      description = note.description;
+      // 多图全量下载（首图必成，后续图失败跳过）；最多 6 张
+      if (note.imageUrls?.length) coverBuffers = await fetchCoverBuffers(note.imageUrls, 6);
+      fetched = !!(title || description || coverBuffers.length > 0);
+    } catch {
+      fetched = false;
+    }
+    if (!fetched) used = 'link-failed';
+  } else if (input) {
+    const t = parseShareText(input);
+    title = t.title;
+    description = t.description;
+  }
+
+  // 2. 生成风格简报（多图视觉分析优先 → 文字兜底）
+  let brief: Awaited<ReturnType<typeof analyzeReferenceImage>> | null = null;
+  const uploadedImg =
+    opts.imageDataUrls && opts.imageDataUrls.length > 0
+      ? opts.imageDataUrls
+      : opts.imageDataUrl
+        ? [opts.imageDataUrl]
+        : [];
+  const imgDataUrls =
+    coverBuffers.length > 0
+      ? coverBuffers.map((b) => `data:image/jpeg;base64,${b.toString('base64')}`)
+      : uploadedImg;
+  const noteText = [title, description].filter(Boolean).join('\n');
+
+  if (llmAvailable()) {
+    if (imgDataUrls.length > 0) {
+      try {
+        brief = await analyzeReferenceImage(imgDataUrls, noteText, anchorName);
+        used = coverBuffers.length > 0 ? 'link-cover' : 'image';
+      } catch { /* 视觉失败 → 文字兜底 */ }
+    }
+    if (!brief && noteText) {
+      try {
+        brief = await analyzeReferenceText(noteText, anchorName);
+        used = url ? 'link-text' : 'text';
+      } catch { /* 都失败 → 手动兜底 */ }
+    }
+  }
+
+  // 3. 组装 createPlan（参考成功则用简报推导主题/场景/地点）
+  const plan = await createPlan({
+    theme: brief?.theme ?? title ?? '小红书灵感拍摄',
+    date: opts.date,
+    locationName: opts.location ?? brief?.locationHint ?? '城市街区',
+    sceneType: opts.sceneType ?? brief?.sceneType ?? '街拍',
+    outfitItemIds: opts.outfitItemIds,
+    styleBrief: brief?.styleBrief,
+    reference: {
+      source: used === 'image' ? 'image' : url ? 'link' : 'text',
+      url,
+      title,
+      description,
+      brief: brief?.styleBrief,
+    },
+  });
+
+  // 4. 多图落盘（放到计划目录 ref/，详情页可展示整组参考）
+  const allBuffers = coverBuffers.length > 0
+    ? coverBuffers
+    : uploadedImg.map((d) => Buffer.from(d.split(',')[1] ?? '', 'base64')).filter((b) => b.length > 0);
+  if (allBuffers.length > 0) {
+    try {
+      const covers = saveCovers(plan.id, allBuffers);
+      const withCovers: PlanReference = {
+        ...(plan.reference ?? { source: used === 'image' ? 'image' : url ? 'link' : 'text' }),
+        cover: covers[0],
+        covers,
+      };
+      await updatePlan(plan.id, (p) => { p.reference = withCovers; });
+      plan.reference = withCovers;
+    } catch { /* 封面保存失败不阻断 */ }
+  }
+
+  return { plan, used };
 }

@@ -5,6 +5,7 @@
     "text": "deepseek-v4-flash",
     "vision": "deepseek-v4-flash-vision-exp"
   },
+  "xhsCookieFile": "~/Downloads/www.xiaohongshu.com_cookies.txt",
   "city": {
     "name": "长沙",
     "lat": 28.2282,

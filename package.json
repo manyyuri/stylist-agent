@@ -14,7 +14,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && npm --prefix web run typecheck",
     "start:server": "tsx server/index.ts",
     "start:flue": "PORT=4291 node flue/dist/server.mjs",
-    "test": "tsx --test server/rules.test.ts server/sun.test.ts server/monthly.test.ts",
+    "test": "tsx --test server/rules.test.ts server/sun.test.ts server/monthly.test.ts server/reference.test.ts",
     "start": "npm run build && tsx server/start.ts"
   },
   "dependencies": {

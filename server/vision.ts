@@ -7,10 +7,9 @@
  */
 import { z } from 'zod';
 import OpenAI from 'openai';
-import { visionClient } from './llm.ts';
+import { visionClient, chatJSON, extractJSON } from './llm.ts';
 import { config } from './config.ts';
-import { extractJSON } from './llm.ts';
-import { ANALYZE_FACE_PROMPT, EXTRACT_ITEM_PROMPT, REVIEW_PHOTOS_PROMPT } from './prompts.ts';
+import { ANALYZE_FACE_PROMPT, EXTRACT_ITEM_PROMPT, REVIEW_PHOTOS_PROMPT, REFERENCE_BRIEF_PROMPT } from './prompts.ts';
 import { autoBaseColor } from './color.ts';
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
@@ -83,6 +82,40 @@ async function visionJSON<T>(schema: z.ZodType<T>, prompt: string, images: strin
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
+// ---------- 管线 4：小红书参考 → 风格简报（封面图/分享文字） ----------
+
+const refBriefSchema = z.object({
+  theme: z.string(),
+  sceneType: z.enum(['街拍', '咖啡店', '公园', '天台', '夜景']),
+  styleBrief: z.string(),
+  locationHint: z.string(),
+});
+export type RefBrief = z.infer<typeof refBriefSchema>;
+
+/** 视觉版：分析封面图（可附笔记文字）。dataUrls 可传多张，综合分析整组 look */
+export async function analyzeReferenceImage(dataUrls: string[], noteText: string, anchorName: string): Promise<RefBrief> {
+  const prompt =
+    REFERENCE_BRIEF_PROMPT(anchorName) +
+    (noteText ? `\n\n笔记文字（辅助，以图为准）：\n${noteText.slice(0, 300)}` : '') +
+    (dataUrls.length > 1
+      ? `\n\n该笔记共 ${dataUrls.length} 张图（按序），请综合所有图分析：首图=主 look，后续图=细节/其他造型/场景，别只看一张。`
+      : '');
+  return visionJSON(refBriefSchema, prompt, dataUrls);
+}
+
+/** 文本版：只有分享文字/标题时用（不依赖图片与反爬） */
+export async function analyzeReferenceText(noteText: string, anchorName: string): Promise<RefBrief> {
+  if (!noteText.trim()) throw new Error('没有可分析的参考文字');
+  return chatJSON({
+    schema: refBriefSchema,
+    maxTokens: 2048,
+    messages: [
+      { role: 'system', content: REFERENCE_BRIEF_PROMPT(anchorName) },
+      { role: 'user', content: `笔记内容：\n${noteText.slice(0, 500)}` },
+    ],
+  });
 }
 
 // ---------- 管线 1：单品识别（入库草稿，必须经用户确认） ----------

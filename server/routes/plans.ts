@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import type { PhotoPlan } from '../../shared/types.ts';
-import { listPlans, getPlan, createPlan, updatePlan } from '../plans.service.ts';
+import { listPlans, getPlan, createPlan, createPlanFromReference, updatePlan } from '../plans.service.ts';
 import { reviewSession, manualReview, listSessionShots } from '../review.service.ts';
 import { processUpload } from '../upload.ts';
 
@@ -25,6 +25,28 @@ plansRouter.post('/', async (req, res) => {
     }
     const plan = await createPlan({ theme, date, locationName: location, sceneType, outfitItemIds, ootdDate });
     res.json(plan);
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message });
+  }
+});
+
+/** 从参考来源创建计划：小红书链接 / 分享文字 / 参考图（data URL） */
+plansRouter.post('/from-link', async (req, res) => {
+  try {
+    const { input, imageDataUrl, imageDataUrls, date, location, sceneType, outfitItemIds } = req.body as {
+      input?: string; imageDataUrl?: string; imageDataUrls?: string[]; date: string; location?: string;
+      sceneType?: PhotoPlan['location']['sceneType']; outfitItemIds?: string[];
+    };
+    if (!date) {
+      res.status(400).json({ error: '需要 date' });
+      return;
+    }
+    if (!input?.trim() && !imageDataUrl && !imageDataUrls?.length) {
+      res.status(400).json({ error: '需要 input（链接/分享文字）或 imageDataUrl(s)（参考图）' });
+      return;
+    }
+    const r = await createPlanFromReference({ input, imageDataUrl, imageDataUrls, date, location, sceneType, outfitItemIds });
+    res.json(r);
   } catch (e) {
     res.status(500).json({ error: (e as Error).message });
   }

@@ -12,6 +12,8 @@ export interface AppConfig {
   dataDir: string; // ~ 开头展开
   models: { text: string; vision: string };
   city: { name: string; lat: number; lon: number };
+  /** 小红书 cookies.txt 路径（~ 开头展开；空串则不启用登录态抓取） */
+  xhsCookieFile?: string;
 }
 
 const raw = JSON.parse(readFileSync(resolve(ROOT, 'config.json'), 'utf8')) as AppConfig;
