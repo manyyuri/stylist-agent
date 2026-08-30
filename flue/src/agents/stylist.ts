@@ -24,4 +24,4 @@ ${LLM_API_KEY ? '' : '\n当前未配置 LLM_API_KEY，请说明离线状态。'}
 }
 
 Stylist.agentName = 'stylist';
-Stylist.durability = { maxAttempts: 3, timeoutMs: 120_000 };
+Stylist.durability = { maxAttempts: 3, timeoutMs: 300_000 };

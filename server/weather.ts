@@ -46,7 +46,7 @@ export async function getWeather(date?: string): Promise<WeatherInfo> {
   const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
   if (!res.ok) throw new Error(`open-meteo ${res.status}`);
   const j = (await res.json()) as {
-    current: { temperature_2m: number; weather_code: number };
+    current: { temperature_2m: number; weather_code: number; precipitation: number };
     daily: {
       time: string[]; weather_code: number[];
       temperature_2m_max: number[]; temperature_2m_min: number[];
@@ -57,6 +57,18 @@ export async function getWeather(date?: string): Promise<WeatherInfo> {
 
   const idx = j.daily.time.indexOf(d);
   if (idx === -1) throw new Error(`无 ${d} 预报（超出 7 天范围）`);
+
+  // 当天优先用实时观测（open-meteo 当日预报有时不准，如预报冰雹实为阴天）；
+  // 未来日期仍用 daily 预报。
+  const isToday = d === today();
+  const condCode = isToday ? j.current.weather_code : j.daily.weather_code[idx]!;
+
+  // 今天：若实时无降水且实时天气非雨，压低降水概率（当日预报常高估，如预报冰雹实为阴天）
+  const rainyCodes = [51, 53, 55, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99];
+  let rainProb = j.daily.precipitation_probability_max[idx] ?? 0;
+  if (isToday && !rainyCodes.includes(condCode) && (j.current.precipitation ?? 0) === 0) {
+    rainProb = Math.min(rainProb, 30);
+  }
 
   const hourly = j.hourly.time
     .map((t, i) => ({ t, i }))
@@ -71,8 +83,8 @@ export async function getWeather(date?: string): Promise<WeatherInfo> {
     date: d,
     temp: Math.round(j.current.temperature_2m),
     tempRange: [Math.round(j.daily.temperature_2m_min[idx]!), Math.round(j.daily.temperature_2m_max[idx]!)],
-    condition: WMO[j.daily.weather_code[idx]!] ?? '未知',
-    rainProb: j.daily.precipitation_probability_max[idx] ?? 0,
+    condition: WMO[condCode] ?? '未知',
+    rainProb,
     hourly,
     sun: {
       sunrise: j.daily.sunrise[idx]!,

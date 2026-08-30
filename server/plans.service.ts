@@ -135,6 +135,15 @@ export interface CreatePlanOpts {
   reference?: PlanReference;
   /** 风格简报（视觉/文本模型分析结果），注入分镜创意 */
   styleBrief?: string;
+  /** 幂等种子：耐久工具重试时同种子 → 同 id，覆盖而不是新建重复企划 */
+  idSeed?: string;
+}
+
+/** 4 位短哈希（djb2 → base36），用于确定性 id */
+function shortHash(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h.toString(36).padStart(4, '0').slice(0, 4);
 }
 
 export async function createPlan(opts: CreatePlanOpts): Promise<PhotoPlan> {
@@ -196,7 +205,9 @@ export async function createPlan(opts: CreatePlanOpts): Promise<PhotoPlan> {
     ];
   }
 
-  const id = `${date}-${SCENE_EN[sceneType]}-${Math.random().toString(36).slice(2, 6)}`;
+  const id = opts.idSeed
+    ? `${date}-${SCENE_EN[sceneType]}-${shortHash(opts.idSeed)}`
+    : `${date}-${SCENE_EN[sceneType]}-${Math.random().toString(36).slice(2, 6)}`;
   const plan: PhotoPlan = {
     id,
     theme,

@@ -159,6 +159,8 @@ export const TOOLS: ToolDef[] = [
         locationName: a.location,
         sceneType: a.sceneType,
         outfitItemIds: a.outfitRef,
+        // 幂等：同参数重试落到同 id（覆盖），避免耐久重试产生重复企划
+        idSeed: `${a.date}|${a.location}|${a.sceneType}|${a.theme}`,
       });
       return plan;
     },
