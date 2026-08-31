@@ -134,7 +134,7 @@ export default function PhotoPage() {
           />
         ) : (
           <List
-            grid={{ gutter: 12, xs: 24, sm: 12, md: 8 }}
+            grid={{ gutter: 12, column: 3, xs: 1, sm: 2, md: 3 }}
             dataSource={plans}
             renderItem={(p) => (
               <List.Item>
