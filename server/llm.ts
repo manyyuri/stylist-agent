@@ -7,18 +7,23 @@
  * chatJSON<T>() 通过 JSON mode + zod 校验 + 失败重试，把概率模型的自由文本
  * 收敛成类型安全的结构化数据。
  */
+import { randomUUID } from 'node:crypto';
 import OpenAI from 'openai';
 import type { ZodType } from 'zod';
 import { config, GLM_API_KEY, GLM_BASE_URL } from './config.ts';
 
+// opencode-luna 网关要求每次请求带 x-opencode-session（MissingSessionID 400），
+// 进程内用同一个稳定 session id 即可（2026-09 网关新增的路由契约）。
+const SESSION_HEADERS = { 'x-opencode-session': randomUUID() };
+
 // reasoning 文本模型：超时放宽到 120s
 export const textClient = GLM_API_KEY
-  ? new OpenAI({ apiKey: GLM_API_KEY, baseURL: GLM_BASE_URL, timeout: 120_000 })
+  ? new OpenAI({ apiKey: GLM_API_KEY, baseURL: GLM_BASE_URL, timeout: 120_000, defaultHeaders: SESSION_HEADERS })
   : null;
 
 // 视觉模型是 reasoning + 多模态，单张真实照片 ~8s；多张复盘放宽到 5 分钟
 export const visionClient = GLM_API_KEY
-  ? new OpenAI({ apiKey: GLM_API_KEY, baseURL: GLM_BASE_URL, timeout: 300_000 })
+  ? new OpenAI({ apiKey: GLM_API_KEY, baseURL: GLM_BASE_URL, timeout: 300_000, defaultHeaders: SESSION_HEADERS })
   : null;
 
 export function llmAvailable(): boolean {
